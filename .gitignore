@@ -39,3 +39,69 @@
 
 # debug information files
 *.dwo
+
+# PlatformIO / Arduino (OPTIMIZADO)
+**/.pio/
+.pioenvs/
+.piolibdeps/
+.ccls-cache/
+ipch/
+*.elf
+*.bin
+*.hex
+*.map
+
+# Build artifacts
+build/
+dist/
+output/
+
+# VS Code / Editors
+.vscode/
+*.code-workspace
+.idea/
+
+# macOS artifacts (Air/M2)
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+.AppleDouble
+.fseventsd
+
+# Python (PC client)
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.venv/
+venv/
+.env
+.env.*
+
+# Logs & temp
+*.log
+*.tmp
+*.swp
+*.swo
+
+# Media (bloqueo general)
+*.png
+*.jpg
+*.jpeg
+*.bmp
+*.gif
+*.mp4
+*.mov
+
+# --- EXCEPCIONES DOCUMENTACIÓN (RECURSIVAS) ---
+!docs/**/*.png
+!docs/**/*.jpg
+!docs/**/*.jpeg
+!docs/**/*.bmp
+
+# Secrets & local config (SIMPLIFICADO)
+**/secrets.h
+secrets.json
+secrets.yaml
