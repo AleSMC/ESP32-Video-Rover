@@ -2,7 +2,7 @@
 
 > **Vehículo RC WiFi híbrido con transmisión de video MJPEG y control UDP.**
 
-Este proyecto implementa un rover controlado remotamente utilizando un **ESP32-CAM** (AI Thinker). El sistema es capaz de funcionar en modo Estación (conectado al WiFi de casa) o Punto de Acceso (emergencia), transmitiendo video en baja latencia y recibiendo comandos de control vía UDP.
+Este proyecto implementa un rover controlado remotamente utilizando un **ESP32-CAM** (AI Thinker). El sistema opera bajo una topología de **Eje Sólido Electrónico** (Tracción trasera unificada) para garantizar estabilidad de arranque y eficiencia de recursos, con dirección Ackermann mediante servomotor.
 
 ## 📂 Estructura del Proyecto
 
@@ -19,17 +19,17 @@ Este proyecto implementa un rover controlado remotamente utilizando un **ESP32-C
 ## 🛠 Hardware y Conexiones
 
 **Plataforma:** ESP32-CAM (Modelo AI Thinker) con antena externa modificada.
+**Topología de Tracción:** Paralelo (Solid Axle). Ambos motores traseros reciben la misma señal PWM y Dirección.
 
-> ℹ️ **Detalles Completos:** Ver guía de montaje y diagramas en [docs/hardware_setup.md](docs/hardware_setup.md).
+> ℹ️ **Detalles Completos:** Ver guía de montaje, netlist y advertencias en [docs/hardware_setup.md](docs/hardware_setup.md).
 
-| Componente          | Pin ESP32 | Función | Notas Técnicas                                             |
-| :------------------ | :-------- | :------ | :--------------------------------------------------------- |
-| **Motor A (L298N)** | GPIO 14   | IN1     |                                                            |
-| **Motor A (L298N)** | GPIO 15   | IN2     |                                                            |
-| **Motor B (L298N)** | GPIO 13   | IN3     |                                                            |
-| **Motor B (L298N)** | GPIO 12   | IN4     | **⚠️ Strapping Pin**: Debe estar flotante/LOW al arrancar. |
-| **Servo Dirección** | GPIO 2    | PWM     | Comparte línea con LED Flash.                              |
-| **Alimentación**    | 5V / GND  | VCC     | **CRÍTICO:** GND común entre L298N y ESP32.                |
+| Señal Lógica        | Pin ESP32 | Conexión L298N | Notas Técnicas                           |
+| :------------------ | :-------- | :------------- | :--------------------------------------- |
+| **PWM (Velocidad)** | GPIO 13   | ENA + ENB      | Puenteado. Control de Potencia (0-100%). |
+| **Dirección Fwd**   | GPIO 14   | IN1 + IN3      | Puenteado. Marcha Adelante.              |
+| **Dirección Rev**   | GPIO 15   | IN2 + IN4      | Puenteado. Marcha Atrás.                 |
+| **Servo Dirección** | GPIO 2    | PWM Signal     | Comparte línea con LED Flash.            |
+| **Reservado (I+D)** | GPIO 12   | **NC**         | _No Conectado_ para evitar Boot Fail.    |
 
 > **Nota:** Se ha desactivado el _Brownout Detector_ por software para evitar reinicios debido a picos de consumo de los motores.
 
@@ -73,11 +73,12 @@ Para ver logs de depuración (IP asignada, estado de motores):
 ## ✅ Roadmap de Desarrollo
 
 - [x] **Paso 0:** Configuración de Entorno y GitOps.
-- [ ] **Paso A:** Implementación de Driver de Motores (L298N).
+- [ ] **Paso A:** Implementación de Driver de Motores (Topología Eje Sólido con PWM).
 - [ ] **Paso B:** Control de Servo de Dirección.
 - [ ] **Paso C:** Stack de Red (WiFi + mDNS + Video).
 - [ ] **Paso D:** Protocolo de Control UDP.
 - [ ] **Paso E:** Cliente Python (PC).
+- [ ] **Fase I+D (Bonus):** Investigación de Diferencial Electrónico. Evaluar viabilidad de uso seguro del GPIO 12 (Strapping Pin) para control independiente de motores.
 
 ---
 
