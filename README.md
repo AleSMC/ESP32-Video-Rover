@@ -1,4 +1,4 @@
-# ESP32-Video-Rover
+# 🚜 ESP32-Video-Rover
 
 > **Vehículo RC WiFi híbrido con transmisión de video MJPEG y control UDP.**
 
@@ -10,6 +10,7 @@ Este proyecto implementa un rover controlado remotamente utilizando un **ESP32-C
     ├── firmware/           # Código fuente C++ (PlatformIO)
     │   ├── src/            # Lógica principal (.cpp)
     │   ├── include/        # Cabeceras (.h) y Configuración
+    │   ├── lib/            # Librerías propias (SolidAxle, etc.)
     │   ├── examples/       # Tests de hardware (Motores, Servo, LED)
     │   └── platformio.ini  # Configuración del entorno de compilación
     ├── software/           # Cliente PC (Python + OpenCV + UDP)
@@ -70,14 +71,21 @@ Para ver logs de depuración (IP asignada, estado de motores):
   - **Control:** UDP (Puerto por defecto: `UDP_PORT` en config).
 - **Seguridad (Failsafe):** Watchdog de 500ms. Si no se reciben paquetes UDP, los motores se detienen.
 
+> **⚠️ NOTA DE SEGURIDAD (REVERSA):**
+> La lógica de reversa está **deshabilitada en el firmware base** (Fase A) para prevenir picos de corriente (Back-EMF). La implementación de reversa segura (con Dynamic Dead Time) se gestionará desde el Cliente Python en fases avanzadas.
+
 ## ✅ Roadmap de Desarrollo
 
 - [x] **Paso 0:** Configuración de Entorno y GitOps.
-- [ ] **Paso A:** Implementación de Driver de Motores (Topología Eje Sólido con PWM).
+- [x] **Paso A:** Implementación de Driver de Motores (Topología Eje Sólido con PWM). _Implementado FWD/Brake/Coast._
 - [ ] **Paso B:** Control de Servo de Dirección.
 - [ ] **Paso C:** Stack de Red (WiFi + mDNS + Video).
 - [ ] **Paso D:** Protocolo de Control UDP.
 - [ ] **Paso E:** Cliente Python (PC).
+  - Implementación de Video y Control Básico.
+  - Implementación de **"Caja de Cambios"** (Shift=Lento, Espacio=Turbo, Nada=Normal).
+- [ ] **Paso EXTRA (Bonus):** Control de Reversa Dinámica.
+  - Implementar lógica de seguridad en Python para calcular el tiempo de frenado necesario según la velocidad previa antes de enviar el comando de reversa.
 - [ ] **Fase I+D (Bonus):** Investigación de Diferencial Electrónico. Evaluar viabilidad de uso seguro del GPIO 12 (Strapping Pin) para control independiente de motores.
 
 ---

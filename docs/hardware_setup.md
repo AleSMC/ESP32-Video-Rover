@@ -16,6 +16,36 @@ Para esta configuración, se deben retirar los Jumpers `ENA` y `ENB` del driver 
 | **Tierra Común**        | **Pin GND**   | **GND**                  | **CRÍTICO:** Referencia común de voltaje.              |
 | **Reservado**           | **GPIO 12**   | _Desconectado_           | Ver sección de limitaciones abajo.                     |
 
+## 1.1 Guía de Unificación de Cables (El "Hack" del Eje Sólido)
+
+Para controlar 4 entradas del L298N con solo 3 pines del ESP32, es necesario duplicar la señal. Existen tres métodos profesionales para lograrlo:
+
+### Opción A: Mini-Protoboard (Recomendada para Prototipos)
+
+Es la opción menos destructiva y más limpia.
+
+1. Colocar el ESP32-CAM en la protoboard.
+2. Sacar un cable desde el **GPIO 14** a una línea vacía de la protoboard.
+3. Desde esa misma línea, sacar dos cables macho-hembra: uno hacia **IN1** y otro hacia **IN3**.
+4. Repetir el proceso para el **GPIO 15** (hacia IN2 e IN4) y el **GPIO 13** (hacia ENA y ENB).
+
+### Opción B: Cables Dupont "Y" (Empalme)
+
+Si no usas protoboard en el chasis:
+
+1. Cortar un extremo de dos cables hembra.
+2. Pelar y unir sus puntas de cobre junto con la punta de un cable macho.
+3. Soldar la unión y proteger con tubo termorretráctil (o cinta aislante).
+   _Resultado:_ Un cable con forma de "Y" (1 Macho al ESP32 -> 2 Hembras al Driver).
+
+### Opción C: Puenteado en el Driver (Soldadura)
+
+Solo para instalaciones permanentes:
+
+1. En la parte inferior del L298N, soldar un pequeño puente de cable entre los pines IN1 e IN3.
+2. Hacer lo mismo entre IN2-IN4 y ENA-ENB.
+3. Conectar un solo cable desde el ESP32 a cualquiera de los dos pines puenteados.
+
 ## 2. Diagrama Visual de Componentes
 
 > ⚠️ **ADVERTENCIA:** La siguiente imagen muestra la ubicación de componentes, pero **LOS CABLES EN LA IMAGEN ESTÁN MAL**. Úsala solo como referencia visual de piezas, pero conecta los cables **según la tabla de arriba**.
@@ -26,7 +56,13 @@ Para esta configuración, se deben retirar los Jumpers `ENA` y `ENB` del driver 
 
 - **Batería del Proyecto:** LiPo 3S (11.1V) 2200mAh (Ref: ELL-MAX).
   - _Nota Técnica:_ El uso de una batería de 11.1V (12.6V a plena carga) incrementa la carga térmica del regulador lineal de 5V integrado. Aunque la operación es segura, **se recomienda garantizar una ventilación adecuada** alrededor del disipador térmico para facilitar la disipación pasiva.
-- **Alimentación de Potencia:** Batería (+) a 12V y Batería (-) a GND.
+- **Alimentación L298N:** Conectar Batería (+) a 12V y Batería (-) a GND.
+- **Alimentación ESP32:** Sacar un cable desde el pin **5V** del L298N hacia el pin **5V** del ESP32-CAM.
+- **Tierra Común (Ground Loop):** Es OBLIGATORIO tener un cable uniendo el GND del L298N con el GND del ESP32. Sin esto, los pines de control no funcionan.
+
+> ⚠️ **RESTRICCIÓN DE CÓDIGO (FASE A):**
+> La reversa está deshabilitada en el firmware base. Si se envían comandos de velocidad negativa (`v < 0`), el sistema registrará un error en consola y aplicará el freno.
+> La funcionalidad de reversa solo debe habilitarse en el código fuente (`SolidAxle.cpp`) después de haber implementado la lógica de **Dynamic Dead Time** en el cliente (Paso EXTRA), para prevenir picos de corriente peligrosos al invertir la marcha.
 
 ## 3. Limitaciones Técnicas y Reservas de Pines
 

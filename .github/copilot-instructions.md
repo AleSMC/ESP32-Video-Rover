@@ -3,7 +3,7 @@ Rol: Ingeniero de Software Embebido Senior (ControlRC) experto en ESP32, C++ (Pl
 ## Contexto del Proyecto
 
 - **Nombre:** ESP32-Video-Rover
-- **Descripción:** Vehículo RC WiFi híbrido (STA/AP) con video MJPEG, control UDP y topología de "Eje Sólido".
+- **Descripción:** Vehículo RC WiFi híbrido (STA/AP) con video MJPEG, control UDP y topología de **"Eje Sólido"** (para eficiencia de pines y PWM).
 - **Hardware Crítico:**
   - ESP32-CAM (AI Thinker + Antena Externa).
   - Driver L298N (Sin Jumpers ENA/ENB, pines puenteados para PWM).
@@ -21,8 +21,6 @@ La fuente de la verdad es `docs/hardware_setup.md`.
    - **GPIO 12:** **DESCONECTADO (NC)**. Reservado para I+D (evitar Boot Fail).
 2. **Dirección:**
    - **GPIO 2:** Señal Servo (Comparte LED Flash).
-3. **Energía:**
-   - Alimentación ESP32: Pin 5V (desde L298N). **GND Común Obligatorio**.
 
 ## Principios Fundamentales
 
@@ -34,28 +32,28 @@ La fuente de la verdad es `docs/hardware_setup.md`.
    - **Brownout:** Desactivar `RTC_CNTL_BROWN_OUT_REG` en setup siempre.
    - **Failsafe:** Watchdog UDP 500ms (Parar motores si no hay datos).
    - **PlatformIO:** `huge_app.csv`, `upload_speed = 115200`, `monitor_filters = esp32_exception_decoder`.
-   - **Batería:** Monitorizar temperatura del L298N debido a los 11.1V.
 3. **Excelencia en GitOps:**
-   - **Estructura:** `firmware/{src, include, examples}`, `software/`, `docs/`.
-   - **Secretos:** `secrets.h` (real) en .gitignore. `secrets_example.h` (plantilla) en repo.
    - **Preservación:** Código de test funcional (Motores, LED) se mueve a `firmware/examples/` antes de limpiar `main.cpp`.
 
-## Metodología de Desarrollo (Estado Actual: Paso A)
+## Metodología de Desarrollo (Orden Estricto)
 
 _NO avanzar sin confirmación de éxito y commit._
 
 - [x] **Paso 0:** Configuración Entorno, Docs y Netlist Eje Sólido.
-- [ ] **Paso A (ACTUAL):** Implementación Clase `TrenDePotencia` (PWM + Dirección unificada).
-  - Validar movimiento y rampa de aceleración.
+- [x] **Paso A:** Implementación Clase `TrenDePotencia` (PWM + Dirección unificada).
+  - **Restricción de Reversa (CRÍTICA):** Firmware rechaza comandos de velocidad negativa (`v < 0`).
+  - Validar FWD, Brake, Coast.
   - Commit: "feat: solid axle motor control implementation".
 - [ ] **Paso B:** Control de Servo (GPIO 2).
 - [ ] **Paso C:** Stack de Red (WiFi + mDNS + Video).
 - [ ] **Paso D:** Protocolo UDP.
 - [ ] **Paso E:** Cliente Python (PC).
-  - Librerías: Usar `cv2` para renderizado de imagen y `socket` nativo.
-  - Concurrencia: Gestionar la recepción UDP en un hilo separado (`threading`) para no bloquear el video.
-  - Lógica: Implementar "Caja de Cambios" por software (Shift=Lento, Espacio=Turbo) y tecla 'R' para inversión de marcha.
-- [ ] **Fase I+D:** Investigación diferencial con GPIO 12.
+  - Librerías: Usar `cv2` para renderizado y `socket` nativo.
+  - Concurrencia: Gestión UDP en hilo separado (`threading`) para no bloquear el video.
+  - Lógica: Implementar "Caja de Cambios" por software (Shift=Lento, Espacio=Turbo)
+- [ ] **Paso EXTRA (Bonus):** Control de Reversa Dinámica.
+  - Implementar lógica de Caja de Cambios (Shift/Espacio) y cálculo de Dynamic Dead Time en el Cliente Python para permitir la reversa segura.
+- [ ] **Fase I+D:** Investigación de Diferencial Electrónico (vía GPIO 12).
 
 ## Instrucción de Estilo
 

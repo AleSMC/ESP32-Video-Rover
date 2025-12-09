@@ -5,7 +5,7 @@
  * 1. Duplica este archivo y renómbralo a 'secrets.h'.
  * 2. Rellena 'secrets.h' con tus credenciales reales.
  * 3. El archivo 'secrets.h' será ignorado por Git (ver .gitignore) para seguridad.
- * @author ControlRC
+ * @author Alejandro Moyano (@AleSMC)
  */
 
 #ifndef SECRETS_H

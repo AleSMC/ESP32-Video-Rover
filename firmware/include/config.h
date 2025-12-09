@@ -1,46 +1,64 @@
 /**
  * @file config.h
- * @brief Configuración global del hardware, mapeo de pines y constantes de red.
- * @details Este archivo actúa como la "Single Source of Truth" (Fuente Única de Verdad)
- * para la configuración física y lógica del Rover.
- * * @board ESP32-CAM (AI Thinker Model)
- * @driver L298N Dual H-Bridge
- * @author ControlRC
+ * @brief Archivo maestro de configuración del sistema ESP32-Video-Rover.
+ * @details Fuente Única de Verdad (Single Source of Truth) para todo el proyecto.
+ * * --- ESPECIFICACIONES DE HARDWARE ---
+ * @board ESP32-CAM (Modelo AI Thinker).
+ * @driver L298N Dual H-Bridge (Configurado en Modo Eje Sólido / Solid Axle).
+ * @actuator Servomotor estándar (SG90/MG90S) para dirección Ackermann.
+ * * --- FUNCIONALIDADES ---
+ * - Red Híbrida (STA + AP de Respaldo).
+ * - Protocolos: mDNS, UDP (Control) y HTTP (Video MJPEG).
+ * - Seguridad: Failsafe activo y gestión de Brownout.
+ * * @author Alejandro Moyano (@AleSMC)
  */
 
 #pragma once
 
 // =============================================================================
-// 1. CONFIGURACIÓN DE ACTUADORES (L298N + SERVO)
+// 1. CONFIGURACIÓN DE TRACCIÓN (TOPOLOGÍA EJE SÓLIDO)
 // =============================================================================
+// Los motores traseros (Izquierdo y Derecho) comparten señales eléctricas.
 
-// --- Motor A (Izquierda) ---
-/** @brief Pin de dirección 1 para el Motor A (Puente H). */
-#define PIN_MOTOR_IN1 14
-/** @brief Pin de dirección 2 para el Motor A (Puente H). */
-#define PIN_MOTOR_IN2 15
+/** * @brief Pin de Velocidad Global (PWM).
+ * @details Conectado a los pines ENA y ENB del driver (Puenteados físicamente).
+ * Controla la potencia del 0% al 100%.
+ * @note GPIO 13 es seguro para PWM y no interfiere con el arranque del ESP32.
+ */
+#define PIN_MOTOR_PWM 13
 
-// --- Motor B (Derecha) ---
-/** @brief Pin de dirección 1 para el Motor B (Puente H). */
-#define PIN_MOTOR_IN3 13
+/** * @brief Pin de Dirección: Marcha Adelante (Forward / FWD).
+ * @details Conectado a IN1 e IN3 del driver (Puenteados físicamente).
+ * Al activarse, ambas ruedas giran hacia adelante.
+ */
+#define PIN_MOTOR_FWD 14
 
-/** * @brief Pin de dirección 2 para el Motor B (Puente H).
+/** * @brief Pin de Dirección: Marcha Atrás (Reverse / REV).
+ * @details Conectado a IN2 e IN4 del driver (Puenteados físicamente).
+ * Al activarse, ambas ruedas giran hacia atrás.
+ */
+#define PIN_MOTOR_REV 15
+
+/** * @brief Pin RESERVADO (No Conectado).
  * @warning CRÍTICO: GPIO 12 es un 'Strapping Pin' (MTDI).
  * Si el driver L298N mantiene este pin en HIGH durante el arranque (Boot),
- * el ESP32 configurará mal el voltaje de la Flash (1.8V) y no arrancará.
- * @note Solución de campo: Desconectar este cable si ocurre un Boot Loop.
+ * el ESP32 configurará mal el voltaje interno de la Flash (1.8V) y no arrancará.
+ * @note Solución de Diseño: Se deja desconectado físicamente en esta versión.
  */
-#define PIN_MOTOR_IN4 12
+#define PIN_RESERVED_12 12
 
-// --- Servo de Dirección ---
-/** * @brief Pin de señal PWM para el servo.
- * @note Este pin (GPIO 4 o 2 según modelo) suele estar compartido con el LED Flash.
+// =============================================================================
+// 2. CONFIGURACIÓN DE DIRECCIÓN (SERVO)
+// =============================================================================
+
+/** * @brief Pin de señal PWM para el servo de dirección.
+ * @note Este pin (GPIO 4 o 2 según variante) suele estar compartido con el LED Flash.
  * El movimiento del servo podría causar destellos leves en el LED.
  */
 #define PIN_SERVO 2
 
 // =============================================================================
-// 2. CONFIGURACIÓN DE RED Y PROTOCOLOS
+// 3. CONFIGURACIÓN DE RED Y PROTOCOLOS
 // =============================================================================
 
 // --- Identidad mDNS ---
@@ -61,7 +79,7 @@
 #define UDP_FAILSAFE_MS 500
 
 // =============================================================================
-// 3. CREDENCIALES DE EMERGENCIA (Fallback AP)
+// 4. CREDENCIALES DE EMERGENCIA (Fallback AP)
 // =============================================================================
 // Estas credenciales se usan SOLO si falla la conexión al WiFi principal (secrets.h).
 #define WIFI_AP_SSID "Rover-Emergency"

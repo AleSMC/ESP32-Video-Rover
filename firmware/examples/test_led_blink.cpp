@@ -1,12 +1,28 @@
 /**
  * @file test_led_blink.cpp
- * @brief Verificación de integridad del sistema y toolchain.
- * @details Módulo de prueba aislado para validar:
+ * @brief Verificación de integridad del sistema (Sanity Check).
+ * @author Alejandro Moyano (@AleSMC)
+ * * @details
+ * Módulo de prueba aislado (Standalone) para validar:
  * 1. Correcta compilación y carga del firmware (Toolchain).
  * 2. Arranque del SoC ESP32 (Boot sequence).
  * 3. Control GPIO básico (parpadeo de LED de estado).
- * * @note Hardware: LED integrado (Generalmente GPIO 33 o GPIO 4).
- * @note Lógica: Lógica negativa (Active LOW) común en módulos AI-Thinker.
+ * * @note Hardware: LED integrado (GPIO 33 en AI-Thinker).
+ * @note Lógica: Lógica negativa (Active LOW).
+ * * =================================================================================
+ * @section execution Procedimiento de Despliegue (CLI)
+ * =================================================================================
+ * * 1. PREPARACIÓN DE SOFTWARE:
+ * - Copiar el contenido íntegro de este archivo.
+ * - Pegarlo en 'firmware/src/main.cpp' (sobrescribiendo el contenido actual).
+ * * 2. COMANDOS DE TERMINAL (Desde la raíz del proyecto):
+ * $ cd firmware
+ * $ pio run -t upload
+ * $ pio device monitor -b 115200
+ * * 3. VERIFICACIÓN:
+ * - El LED rojo trasero debe parpadear (Breve destello cada 2 segundos).
+ * - El monitor serie debe mostrar "Heartbeat: System Active".
+ * =================================================================================
  */
 
 #include <Arduino.h>
