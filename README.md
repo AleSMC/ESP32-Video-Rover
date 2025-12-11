@@ -7,15 +7,17 @@ Este proyecto implementa un rover controlado remotamente utilizando un **ESP32-C
 ## 📂 Estructura del Proyecto
 
     ESP32-Video-Rover/
-    ├── firmware/           # Código fuente C++ (PlatformIO)
-    │   ├── src/            # Lógica principal (.cpp)
-    │   ├── include/        # Cabeceras (.h) y Configuración
-    │   ├── lib/            # Librerías propias (SolidAxle, etc.)
-    │   ├── examples/       # Tests de hardware (Motores, Servo, LED)
-    │   └── platformio.ini  # Configuración del entorno de compilación
-    ├── software/           # Cliente PC (Python + OpenCV + UDP)
-    ├── docs/               # Documentación técnica, diagramas y notas
-    └── README.md           # Este archivo
+    ├── firmware/               # Código fuente C++ (PlatformIO)
+    │   ├── src/                # Lógica principal (.cpp)
+    │   ├── include/            # Cabeceras (.h) y Configuración
+    │   ├── lib/                # Librerías de Hardware
+    │   │   └── SolidAxle/      # Driver de tracción (Topología Eje Sólido)
+    |   |   └── SteeringServo/  # Driver de dirección (Servo Ackermann)
+    │   ├── examples/           # Tests unitarios preservados (Motores, Servo, LED)
+    │   └── platformio.ini      # Configuración del entorno de compilación
+    ├── software/               # Cliente PC (Python + OpenCV + UDP)
+    ├── docs/                   # Documentación técnica, diagramas y notas
+    └── README.md               # Este archivo
 
 ## 🛠 Hardware y Conexiones
 
@@ -78,7 +80,7 @@ Para ver logs de depuración (IP asignada, estado de motores):
 
 - [x] **Paso 0:** Configuración de Entorno y GitOps.
 - [x] **Paso A:** Implementación de Driver de Motores (Topología Eje Sólido con PWM). _Implementado FWD/Brake/Coast._
-- [ ] **Paso B:** Control de Servo de Dirección.
+- [x] **Paso B:** Control de Servo de Dirección.
 - [ ] **Paso C:** Stack de Red (WiFi + mDNS + Video).
 - [ ] **Paso D:** Protocolo de Control UDP.
 - [ ] **Paso E:** Cliente Python (PC).

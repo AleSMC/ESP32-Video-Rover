@@ -48,14 +48,30 @@
 #define PIN_RESERVED_12 12
 
 // =============================================================================
-// 2. CONFIGURACIÓN DE DIRECCIÓN (SERVO)
+// 2. CONFIGURACIÓN DE DIRECCIÓN (SERVO ACKERMANN)
 // =============================================================================
 
-/** * @brief Pin de señal PWM para el servo de dirección.
- * @note Este pin (GPIO 4 o 2 según variante) suele estar compartido con el LED Flash.
- * El movimiento del servo podría causar destellos leves en el LED.
+/** @brief Pin de señal PWM para el servo. (GPIO 2 comparte LED Flash)
+ * @note El movimiento del servo podría causar destellos leves en el LED.
  */
 #define PIN_SERVO 2
+
+// --- CALIBRACIÓN DE ÁNGULOS (GRADOS 0-180) ---
+// AJUSTA ESTOS VALORES POCO A POCO PARA NO FORZAR EL MECANISMO
+
+/** @brief Ángulo central (Ruedas rectas). Valor ideal: 90. */
+#define STEERING_CENTER 90
+
+/** @brief Límite Máximo Izquierda.
+ * Empieza con un valor cercano a 90 (ej: 75) y baja poco a poco hacia 0.
+ * Si oyes zumbidos, has llegado al tope físico: retrocede 5 grados.
+ */
+#define STEERING_LEFT_MAX 70
+
+/** @brief Límite Máximo Derecha.
+ * Empieza con un valor cercano a 90 (ej: 105) y sube poco a poco hacia 180.
+ */
+#define STEERING_RIGHT_MAX 110
 
 // =============================================================================
 // 3. CONFIGURACIÓN DE RED Y PROTOCOLOS

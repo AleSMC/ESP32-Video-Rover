@@ -40,11 +40,17 @@ La fuente de la verdad es `docs/hardware_setup.md`.
 _NO avanzar sin confirmación de éxito y commit._
 
 - [x] **Paso 0:** Configuración Entorno, Docs y Netlist Eje Sólido.
+  - Estructura PlatformIO, `.gitignore` y gestión de secretos (`secrets.h`) configurados.
+  - Documentación de hardware (`hardware_setup.md`) y Netlist definidos.
+  - Commit: "chore: initial project setup and documentation".
 - [x] **Paso A:** Implementación Clase `TrenDePotencia` (PWM + Dirección unificada).
   - **Restricción de Reversa (CRÍTICA):** Firmware rechaza comandos de velocidad negativa (`v < 0`).
   - Validar FWD, Brake, Coast.
   - Commit: "feat: solid axle motor control implementation".
-- [ ] **Paso B:** Control de Servo (GPIO 2).
+- [x] **Paso B:** Control de Servo (GPIO 2).
+  - Librería `SteeringServo` implementada con límites de seguridad en `config.h`.
+  - Calibración física verificada (Centro/Izq/Der).
+  - Commit: "feat: implementation of ackermann steering servo control".
 - [ ] **Paso C:** Stack de Red (WiFi + mDNS + Video).
 - [ ] **Paso D:** Protocolo UDP.
 - [ ] **Paso E:** Cliente Python (PC).

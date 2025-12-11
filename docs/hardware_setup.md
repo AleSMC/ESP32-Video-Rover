@@ -16,6 +16,10 @@ Para esta configuración, se deben retirar los Jumpers `ENA` y `ENB` del driver 
 | **Tierra Común**        | **Pin GND**   | **GND**                  | **CRÍTICO:** Referencia común de voltaje.              |
 | **Reservado**           | **GPIO 12**   | _Desconectado_           | Ver sección de limitaciones abajo.                     |
 
+> ⚠️ **ADVERTENCIA SOBRE GPIO 2 (SERVO):**
+> El GPIO 2 está conectado internamente al **LED Flash** de alta potencia del ESP32-CAM.
+> Al enviar señales PWM al servo, **el LED parpadeará o se encenderá**, lo cual es normal pero puede ser molesto y generar calor. Si deseas evitar esto, deberás desoldar el LED o taparlo con cinta aislante.
+
 ## 1.1 Guía de Unificación de Cables (El "Hack" del Eje Sólido)
 
 Para controlar 4 entradas del L298N con solo 3 pines del ESP32, es necesario duplicar la señal. Existen tres métodos profesionales para lograrlo:
@@ -64,9 +68,16 @@ Solo para instalaciones permanentes:
 > La reversa está deshabilitada en el firmware base. Si se envían comandos de velocidad negativa (`v < 0`), el sistema registrará un error en consola y aplicará el freno.
 > La funcionalidad de reversa solo debe habilitarse en el código fuente (`SolidAxle.cpp`) después de haber implementado la lógica de **Dynamic Dead Time** en el cliente (Paso EXTRA), para prevenir picos de corriente peligrosos al invertir la marcha.
 
-## 3. Limitaciones Técnicas y Reservas de Pines
+## 3. Resolución de Problemas (Troubleshooting), Limitaciones Técnicas y Reservas de Pines
 
-### A. Modificación de Antena
+### A. El ESP32 se reinicia al mover el Servo (Brownout)
+
+El regulador de 5V del L298N puede no ser suficiente para alimentar el WiFi y el Servo simultáneamente.
+
+- **Solución 1 (Fácil):** Conectar un condensador electrolítico (ej. 1000µF / 16V) entre los pines 5V y GND, cerca del ESP32.
+- **Solución 2 (Robusta):** Usar un regulador externo (UBEC/Buck Converter) de 5V solo para alimentar el Servo directamente desde la batería, compartiendo solo la tierra (GND) con el resto del sistema.
+
+### B. Modificación de Antena
 
 Para usar la antena externa y optimizar el rango de video:
 
@@ -74,7 +85,7 @@ Para usar la antena externa y optimizar el rango de video:
 2. Verificar la resistencia de 0-ohm.
 3. **Acción:** Debe estar soldada en la posición que conecta hacia el conector IPEX, deshabilitando la antena de PCB.
 
-### B. Restricción del GPIO 12 (Strapping Pin)
+### C. Restricción del GPIO 12 (Strapping Pin)
 
 El GPIO 12 determina el voltaje interno de la memoria flash (VDD_SDIO) durante el arranque (Boot).
 
