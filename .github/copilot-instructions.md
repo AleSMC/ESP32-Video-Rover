@@ -50,8 +50,17 @@ _NO avanzar sin confirmación de éxito y commit._
 - [x] **Paso B:** Control de Servo (GPIO 2).
   - Librería `SteeringServo` implementada con límites de seguridad en `config.h`.
   - Calibración física verificada (Centro/Izq/Der).
-  - Commit: "feat: implementation of ackermann steering servo control".
-- [ ] **Paso C:** Stack de Red (WiFi + mDNS + Video).
+  - Commit: "feat: implementation of ackermann steering servo control"..
+- [x] **Paso C.1 (ACTUAL -> COMPLETADO):** Stack de Red (Conectividad).
+  - Librería `NetworkManager` implementada.
+  - Lógica Híbrida: Intenta STA (Casa) -> Fallback a AP (Rover-Emergency).
+  - mDNS (`rover.local`) funcional.
+  - Commit: "feat: network layer implementation (STA/AP failover)".
+- [x] **Paso C.2:** Servidor de Video (OV2640).
+  - Librería `CameraServer` implementada (Encapsulamiento de esp32-camera).
+  - Streaming MJPEG optimizado para baja latencia (QVGA, 2 buffers).
+  - Endpoint HTTP: `http://rover.local:80/stream`.
+  - Commit: "feat: implement MJPEG video streaming server".
 - [ ] **Paso D:** Protocolo UDP.
 - [ ] **Paso E:** Cliente Python (PC).
   - Librerías: Usar `cv2` para renderizado y `socket` nativo.

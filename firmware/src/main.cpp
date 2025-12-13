@@ -1,79 +1,90 @@
 /**
  * @file main.cpp
- * @brief Punto de entrada del Firmware - Fase C (Stack de Red).
+ * @brief Punto de entrada del Firmware - Fase C.2 (Streaming de Video).
  * @author Alejandro Moyano (@AleSMC)
- * @version 1.3.0 (Network Layer)
+ * @version 1.4.0 (Video Layer)
  * * @details
- * Este archivo orquesta la inicialización del sistema. En la Fase C, su responsabilidad es:
- * 1. Gestión de Energía (Desactivar Brownout Detector).
- * 2. Inicialización del Hardware Serial (Logs).
- * 3. Despliegue del Gestor de Red (NetworkManager) con lógica de Failover (STA -> AP).
- * 4. Bucle principal con mantenimiento de servicios y telemetría básica.
+ * Orquesta la inicialización del sistema completo.
+ * 1. Inicializa la Cámara (Prioridad Hardware).
+ * 2. Conecta a la Red (WiFi/AP).
+ * 3. Inicia el Servidor Web.
+ * 4. Mantiene el sistema vivo.
  * * @note
- * El código de control de motores y servo se integrará en fases posteriores.
+ * Si la cámara falla al inicio, el sistema entra en bucle de error para proteger el hardware.
  */
 
 #include <Arduino.h>
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
-#include "config.h"         // Configuración Maestra de Hardware
-#include "NetworkManager.h" // Gestor de Conectividad (WiFi + mDNS)
+#include "config.h"
+#include "NetworkManager.h"
+#include "CameraServer.h"
 
 // =============================================================================
 // INSTANCIAS GLOBALES
 // =============================================================================
-/** * @brief Gestor de Red.
- * Encargado de mantener la conexión WiFi y el servicio mDNS.
- */
-NetworkManager network;
+NetworkManager network; // Gestor de Conectividad
+CameraServer camera;    // Gestor de Video
 
 // =============================================================================
-// SETUP (CONFIGURACIÓN INICIAL)
+// SETUP
 // =============================================================================
 void setup()
 {
     // 1. GESTIÓN DE ENERGÍA (CRÍTICO)
-    // El arranque del WiFi genera picos de corriente altos. Si la batería no es perfecta,
-    // el voltaje puede caer momentáneamente (dip), disparando el "Brownout Detector"
-    // y reiniciando el ESP32 en bucle. Lo desactivamos para ganar estabilidad.
+    // Desactivar Brownout para soportar picos de consumo de WiFi + Cámara
     WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
 
-    // 2. INICIO DE PUERTO SERIE
-    // Velocidad: 115200 baudios (Estándar para ESP32).
+    // 2. INICIO SERIAL
     Serial.begin(115200);
-
-    // Pequeña pausa para permitir que el chip USB-Serial se estabilice
     delay(1000);
 
-    // 3. INICIO DEL STACK DE RED
-    // Esta función es bloqueante (puede tardar ~10s).
-    // Intenta conectar a WiFi Hogar (STA). Si falla, crea WiFi Propia (AP).
+    // 3. INICIALIZAR CÁMARA (OV2640)
+    // Se inicia ANTES del WiFi para reservar los buffers de memoria (DMA)
+    // sin fragmentación.
+    Serial.println("\n[BOOT] Inicializando Hardware de Video...");
+    if (camera.init())
+    {
+        Serial.println("[BOOT] Cámara OV2640 lista y buffers asignados.");
+    }
+    else
+    {
+        Serial.println("[ERROR] No se detecta la cámara. REVISA CABLE FLEX.");
+        // Bucle de muerte: Detenemos todo si no hay ojos.
+        while (true)
+        {
+            delay(1000);
+        }
+    }
+
+    // 4. INICIAR STACK DE RED
+    // Conecta a WiFi Hogar o crea AP de Emergencia
     network.begin();
 
-    Serial.println("\n[BOOT] Sistema iniciado correctamente. Esperando clientes...");
+    // 5. ARRANCAR SERVIDOR WEB
+    // Habilita la ruta /stream en el puerto 80
+    camera.startServer();
+
+    // 6. REPORTE FINAL
+    Serial.println("\n[BOOT] Sistema ONLINE - Video Ready.");
+    Serial.printf("[INFO] Ver Video (mDNS): http://%s.local/stream\n", MDNS_NAME);
+    Serial.printf("[INFO] Ver Video (IP):   http://%s/stream\n", network.getIP().c_str());
 }
 
 // =============================================================================
-// LOOP (BUCLE PRINCIPAL)
+// LOOP
 // =============================================================================
 void loop()
 {
-    // 1. MANTENIMIENTO DE RED
-    // Vital para gestionar reconexiones y atender peticiones mDNS entrantes.
+    // Mantenimiento de servicios de red
     network.update();
 
-    // 2. TELEMETRÍA (HEARTBEAT)
-    // Imprime el estado cada 5 segundos sin bloquear el procesador.
-    // Usamos el patrón "Millis Timer" en lugar de delay().
+    // Telemetría periódica (Heartbeat) cada 5 segundos
     static unsigned long lastTime = 0;
-    const unsigned long interval = 5000;
-
-    if (millis() - lastTime > interval)
+    if (millis() - lastTime > 5000)
     {
         lastTime = millis();
-
-        // Reporte de estado en consola
-        Serial.printf("[STATUS] Modo: %s | IP: %s | Uptime: %lu s\n",
+        Serial.printf("[ALIVE] Modo: %s | IP: %s | Uptime: %lu s\n",
                       network.getMode().c_str(),
                       network.getIP().c_str(),
                       millis() / 1000);

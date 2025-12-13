@@ -10,9 +10,11 @@ Este proyecto implementa un rover controlado remotamente utilizando un **ESP32-C
     ├── firmware/               # Código fuente C++ (PlatformIO)
     │   ├── src/                # Lógica principal (.cpp)
     │   ├── include/            # Cabeceras (.h) y Configuración
-    │   ├── lib/                # Librerías de Hardware
-    │   │   └── SolidAxle/      # Driver de tracción (Topología Eje Sólido)
-    |   |   └── SteeringServo/  # Driver de dirección (Servo Ackermann)
+    │   ├── lib/                # Librerías Modulares
+    │   │   ├── SolidAxle/      # Driver de tracción (Topología Eje Sólido)
+    │   │   ├── SteeringServo/  # Driver de dirección (Servo Ackermann)
+    │   │   ├── NetworkManager/ # Gestor de conectividad (WiFi STA/AP + mDNS)
+    │   │   └── CameraServer/   # Driver de video (OV2640 + Servidor Web MJPEG)
     │   ├── examples/           # Tests unitarios preservados (Motores, Servo, LED)
     │   └── platformio.ini      # Configuración del entorno de compilación
     ├── software/               # Cliente PC (Python + OpenCV + UDP)
@@ -81,7 +83,10 @@ Para ver logs de depuración (IP asignada, estado de motores):
 - [x] **Paso 0:** Configuración de Entorno y GitOps.
 - [x] **Paso A:** Implementación de Driver de Motores (Topología Eje Sólido con PWM). _Implementado FWD/Brake/Coast._
 - [x] **Paso B:** Control de Servo de Dirección.
-- [ ] **Paso C:** Stack de Red (WiFi + mDNS + Video).
+- [x] **Paso C.1:** Conectividad de Red (WiFi Híbrido + mDNS).
+  - _El Rover se conecta automáticamente al WiFi configurado o crea su propio Punto de Acceso._
+- [x] **Paso C.2:** Transmisión de Video (Cámara OV2640).
+  - _Servidor Web asíncrono con streaming MJPEG de baja latencia._
 - [ ] **Paso D:** Protocolo de Control UDP.
 - [ ] **Paso E:** Cliente Python (PC).
   - Implementación de Video y Control Básico.
