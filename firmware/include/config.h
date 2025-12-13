@@ -1,19 +1,22 @@
 /**
  * @file config.h
- * @brief Archivo maestro de configuración del sistema ESP32-Video-Rover.
- * @details Fuente Única de Verdad (Single Source of Truth) para todo el proyecto.
+ * @brief Archivo maestro de configuración de Hardware y Constantes del Sistema.
+ * @details Fuente Única de Verdad (Single Source of Truth) para el mapeo de GPIOs
+ * y parámetros físicos del robot.
  * * --- ESPECIFICACIONES DE HARDWARE ---
  * @board ESP32-CAM (Modelo AI Thinker).
  * @driver L298N Dual H-Bridge (Configurado en Modo Eje Sólido / Solid Axle).
  * @actuator Servomotor estándar (SG90/MG90S) para dirección Ackermann.
  * * --- FUNCIONALIDADES ---
- * - Red Híbrida (STA + AP de Respaldo).
- * - Protocolos: mDNS, UDP (Control) y HTTP (Video MJPEG).
- * - Seguridad: Failsafe activo y gestión de Brownout.
- * * @author Alejandro Moyano (@AleSMC)
+ * - Mapeo de Pines (GPIO).
+ * - Calibración Mecánica (Servo).
+ * - Constantes de Protocolo (Puertos y Tiempos).
+ * * @warning NO incluir credenciales WiFi aquí. Usar 'secrets.h'.
+ * @author Alejandro Moyano (@AleSMC)
  */
 
 #pragma once
+#include <Arduino.h>
 
 // =============================================================================
 // 1. CONFIGURACIÓN DE TRACCIÓN (TOPOLOGÍA EJE SÓLIDO)
@@ -36,12 +39,12 @@
 /** * @brief Pin de Dirección: Marcha Atrás (Reverse / REV).
  * @details Conectado a IN2 e IN4 del driver (Puenteados físicamente).
  * Al activarse, ambas ruedas giran hacia atrás.
+ * @warning La reversa debe usarse con precaución (Ver documentación sobre Back-EMF).
  */
 #define PIN_MOTOR_REV 15
 
 /** * @brief Pin RESERVADO (No Conectado).
- * @warning CRÍTICO: GPIO 12 es un 'Strapping Pin' (MTDI).
- * Si el driver L298N mantiene este pin en HIGH durante el arranque (Boot),
+ * @warning CRÍTICO: GPIO 12 es un 'Strapping Pin' (MTDI).  * Si el driver L298N mantiene este pin en HIGH durante el arranque (Boot),
  * el ESP32 configurará mal el voltaje interno de la Flash (1.8V) y no arrancará.
  * @note Solución de Diseño: Se deja desconectado físicamente en esta versión.
  */
@@ -51,20 +54,21 @@
 // 2. CONFIGURACIÓN DE DIRECCIÓN (SERVO ACKERMANN)
 // =============================================================================
 
-/** @brief Pin de señal PWM para el servo. (GPIO 2 comparte LED Flash)
- * @note El movimiento del servo podría causar destellos leves en el LED.
+/** * @brief Pin de señal PWM para el servo.
+ * @note El GPIO 2 comparte línea física con el LED Flash de alta potencia.
+ * Es comportamiento esperado ver destellos en el LED al mover la dirección.
  */
 #define PIN_SERVO 2
 
 // --- CALIBRACIÓN DE ÁNGULOS (GRADOS 0-180) ---
 // AJUSTA ESTOS VALORES POCO A POCO PARA NO FORZAR EL MECANISMO
 
-/** @brief Ángulo central (Ruedas rectas). Valor ideal: 90. */
+/** @brief Ángulo central (Ruedas rectas). Valor ideal teórico: 90. */
 #define STEERING_CENTER 90
 
 /** @brief Límite Máximo Izquierda.
  * Empieza con un valor cercano a 90 (ej: 75) y baja poco a poco hacia 0.
- * Si oyes zumbidos, has llegado al tope físico: retrocede 5 grados.
+ * Si oyes zumbidos, has llegado al tope físico: retrocede 5 grados inmediatamente.
  */
 #define STEERING_LEFT_MAX 70
 
@@ -74,29 +78,24 @@
 #define STEERING_RIGHT_MAX 110
 
 // =============================================================================
-// 3. CONFIGURACIÓN DE RED Y PROTOCOLOS
+// 3. CONFIGURACIÓN DE PROTOCOLOS (CONSTANTES DE SISTEMA)
 // =============================================================================
 
-// --- Identidad mDNS ---
-/** @brief Hostname base. El dispositivo será accesible como 'rover.local'. */
-#define MDNS_NAME "rover"
-#define MDNS_DOMAIN "local"
+/** * @brief Puerto de escucha UDP para Comandos.
+ * @details El Rover escuchará paquetes de control (ej: "W", "A", "S", "D") en este puerto.
+ * @note Debe coincidir con el puerto de envío del cliente Python.
+ */
+const int UDP_PORT = 9999;
 
-// --- Puertos de Servicio ---
-/** @brief Puerto de escucha para paquetes de control UDP (WASD). */
-#define UDP_CONTROL_PORT 3333
-/** @brief Puerto TCP para el servidor web y streaming MJPEG. */
-#define MJPEG_HTTP_PORT 80
+/** * @brief Puerto TCP para el Servidor Web.
+ * @details Puerto estándar HTTP para servir la interfaz y el stream MJPEG.
+ */
+const int HTTP_PORT = 80;
 
 // --- Seguridad ---
-/** * @brief Tiempo máximo sin recibir paquetes UDP antes de activar el Failsafe.
- * Si pasan 500ms sin comandos, los motores se detienen por seguridad.
- */
-#define UDP_FAILSAFE_MS 500
 
-// =============================================================================
-// 4. CREDENCIALES DE EMERGENCIA (Fallback AP)
-// =============================================================================
-// Estas credenciales se usan SOLO si falla la conexión al WiFi principal (secrets.h).
-#define WIFI_AP_SSID "Rover-Emergency"
-#define WIFI_AP_PASS "rover1234"
+/** * @brief Tiempo máximo sin recibir paquetes UDP antes de activar el Failsafe.
+ * @details Si pasan 500ms sin recibir comandos válidos, el Watchdog de software
+ * detendrá los motores para evitar que el robot se escape si pierde WiFi.
+ */
+const int UDP_FAILSAFE_MS = 500;

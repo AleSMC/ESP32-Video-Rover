@@ -75,7 +75,7 @@ Solo para instalaciones permanentes:
 El regulador de 5V del L298N puede no ser suficiente para alimentar el WiFi y el Servo simultáneamente.
 
 - **Solución 1 (Fácil):** Conectar un condensador electrolítico (ej. 1000µF / 16V) entre los pines 5V y GND, cerca del ESP32.
-- **Solución 2 (Robusta):** Usar un regulador externo (UBEC/Buck Converter) de 5V solo para alimentar el Servo directamente desde la batería, compartiendo solo la tierra (GND) con el resto del sistema.
+- **Solución 2 (Robusta - IMPLEMENTADA):** Usar un regulador externo (UBEC/Buck Converter) de 5V solo para alimentar el Servo directamente desde la batería, compartiendo solo la tierra (GND) con el resto del sistema.
 
 ### B. Modificación de Antena
 

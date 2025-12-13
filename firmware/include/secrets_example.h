@@ -1,36 +1,44 @@
 /**
  * @file secrets_example.h
- * @brief Plantilla de credenciales de red y configuración sensible.
- * @details INSTRUCCIONES DE USO:
+ * @brief Plantilla de credenciales de red (Placeholder).
+ * @details INSTRUCCIONES DE USO PARA DESARROLLADORES:
  * 1. Duplica este archivo y renómbralo a 'secrets.h'.
  * 2. Rellena 'secrets.h' con tus credenciales reales.
- * 3. El archivo 'secrets.h' será ignorado por Git (ver .gitignore) para seguridad.
+ * 3. El archivo 'secrets.h' será ignorado por Git para seguridad.
  * @author Alejandro Moyano (@AleSMC)
  */
 
-#ifndef SECRETS_H
-#define SECRETS_H
+#pragma once
 
-// ==========================================
-// 1. CONFIGURACIÓN MODO ESTACIÓN (Cliente)
-// ==========================================
-// El Rover intentará conectarse a esta red WiFi primero (ej: tu casa).
-const char *WIFI_SSID = "TU_NOMBRE_DE_WIFI_AQUI";
-const char *WIFI_PASS = "TU_CONTRASEÑA_WIFI_AQUI";
+// =============================================================================
+// 1. MODO ESTACIÓN (STA) - CONEXIÓN PRINCIPAL
+// =============================================================================
 
-// ==========================================
-// 2. CONFIGURACIÓN MODO PUNTO DE ACCESO (AP)
-// ==========================================
-// Si falla la conexión anterior, el Rover creará su propia red.
-// SSID: Nombre visible del Rover en el móvil
-const char *AP_SSID = "Rover-Emergency";
-// PASS: Contraseña para conectarte al Rover (Mínimo 8 caracteres)
-const char *AP_PASS = "rover1234";
+/** @brief Nombre de la red WiFi (SSID) a la que conectarse. */
+#define WIFI_SSID "PON_TU_SSID_AQUI"
 
-// ==========================================
-// 3. CONFIGURACIÓN DE RED
-// ==========================================
-// Puerto UDP donde el Rover escuchará comandos (WASD)
-const int UDP_PORT = 9999;
+/** @brief Contraseña de la red WiFi. */
+#define WIFI_PASSWORD "PON_TU_CONTRASEÑA_AQUI"
 
-#endif
+// =============================================================================
+// 2. MODO PUNTO DE ACCESO (AP) - RESPALDO DE EMERGENCIA
+// =============================================================================
+
+/** @brief SSID del Hotspot del Rover. */
+#define AP_SSID "Rover-Emergency"
+
+/** @brief Contraseña WPA2 para acceder al Rover. */
+#define AP_PASSWORD "rover1234"
+
+/** @brief Canal WiFi de emisión (1-13). */
+#define AP_CHANNEL 1
+
+/** @brief Límite de conexiones simultáneas (Ahorro RAM). */
+#define AP_MAX_CONN 2
+
+// =============================================================================
+// 3. IDENTIDAD DE RED (mDNS)
+// =============================================================================
+
+/** @brief Hostname base (ej: rover -> rover.local). */
+#define DEVICE_HOSTNAME "rover"
