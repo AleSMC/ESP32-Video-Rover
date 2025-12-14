@@ -61,7 +61,11 @@ _NO avanzar sin confirmación de éxito y commit._
   - Streaming MJPEG optimizado para baja latencia (QVGA, 2 buffers).
   - Endpoint HTTP: `http://rover.local:80/stream`.
   - Commit: "feat: implement MJPEG video streaming server".
-- [ ] **Paso D:** Protocolo UDP.
+- [x] **Paso D (COMPLETADO):** Protocolo UDP.
+  - Librería `RemoteControl` implementada.
+  - Protocolo Binario (2 Bytes: Tracción/Dirección).
+  - Seguridad: Cache de estado (anti-redundancia) y Failsafe (500ms).
+  - Commit: "feat: implement UDP control protocol with failsafe protection".
 - [ ] **Paso E:** Cliente Python (PC).
   - Librerías: Usar `cv2` para renderizado y `socket` nativo.
   - Concurrencia: Gestión UDP en hilo separado (`threading`) para no bloquear el video.

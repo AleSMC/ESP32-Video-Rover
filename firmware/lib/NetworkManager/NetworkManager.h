@@ -1,50 +1,60 @@
 /**
  * @file NetworkManager.h
- * @brief Gestor de conectividad WiFi (Híbrido STA/AP) y mDNS.
- * @details Gestiona automáticamente la conexión a la red doméstica o el despliegue
- * de un punto de acceso de emergencia.
+ * @brief Contrato de la interfaz de conectividad WiFi (STA + AP).
  * @author Alejandro Moyano (@AleSMC)
+ * @version 1.1.0
+ * @details
+ * Expone métodos para gestionar la conexión sin bloquear el hilo principal
+ * indefinidamente y provee getters para telemetría.
  */
 
 #pragma once
 #include <Arduino.h>
 #include <WiFi.h>
 #include <ESPmDNS.h>
-#include "secrets.h" // Importamos las credenciales (WIFI_SSID, AP_SSID, etc.)
+#include "secrets.h" // Dependencia crítica: WIFI_SSID, AP_SSID, etc.
 
 class NetworkManager
 {
 private:
-    bool _isAP; // Estado interno: true = Modo Punto de Acceso, false = Modo Estación
+    /**
+     * @brief Estado actual de operación.
+     * - true: Modo Emergencia (Hotspot propio).
+     * - false: Modo Normal (Conectado a Router).
+     */
+    bool _isAP;
 
 public:
     /**
-     * @brief Constructor por defecto.
+     * @brief Constructor. Inicializa el estado por defecto a Cliente (STA).
      */
     NetworkManager();
 
     /**
-     * @brief Inicia la lógica de conexión.
-     * 1. Intenta conectar a la red WiFi configurada (STA) durante 10s.
-     * 2. Si falla, levanta un Punto de Acceso (AP) propio.
-     * 3. Inicia el servicio mDNS (rover.local).
+     * @brief Inicia la máquina de estados de red.
+     * @details
+     * 1. Intenta conectar a WIFI_SSID (timeout 10s).
+     * 2. Si falla, levanta AP_SSID (Red de emergencia).
+     * 3. Inicia mDNS para resolución de nombres.
+     * @note Esta función es bloqueante durante el intento de conexión.
      */
     void begin();
 
     /**
-     * @brief Mantenimiento de red.
-     * Debe llamarse periódicamente en el loop() para gestionar reconexiones o servicios.
+     * @brief Ciclo de mantenimiento (Tick).
+     * @note Actualmente pasivo gracias a la gestión interna de FreeRTOS en ESP32,
+     * pero reservado para futura lógica de reconexión automática (Watchdog de Red).
      */
     void update();
 
     /**
-     * @brief Obtiene la dirección IP actual del dispositivo.
-     * @return String con la IP (ej: "192.168.1.50" o "192.168.4.1").
+     * @brief Devuelve la IP asignada.
+     * @return String con formato "XXX.XXX.XXX.XXX". Depende del modo (STA vs AP).
      */
     String getIP();
 
     /**
-     * @brief Obtiene el modo de operación actual en texto.
+     * @brief Devuelve una descripción legible del modo actual.
      * @return "STA (WiFi Hogar)" o "AP (Hotspot)".
      */
     String getMode();

@@ -1,6 +1,6 @@
 /**
  * @file SteeringServo.cpp
- * @brief Implementación del controlador de dirección.
+ * @brief Implementación del control de servo seguro.
  * @author Alejandro Moyano (@AleSMC)
  */
 
@@ -8,6 +8,11 @@
 
 SteeringServo::SteeringServo(int pin, int center, int leftMax, int rightMax)
 {
+    // Calculamos los límites absolutos independientemente de si Izquierda < Derecha o viceversa.
+    // Esto hace el código robusto ante diferentes montajes mecánicos.
+    _minLimit = min(leftMax, rightMax);
+    _maxLimit = max(leftMax, rightMax);
+
     _pin = pin;
     _angleCenter = center;
     _angleLeft = leftMax;
@@ -16,21 +21,19 @@ SteeringServo::SteeringServo(int pin, int center, int leftMax, int rightMax)
 
 void SteeringServo::begin()
 {
-    // 1. Configurar Frecuencia PWM (Periodo)
-    // Los servos analógicos (SG90/MG90S) esperan un pulso cada 20ms.
-    // Frecuencia = 1 / 0.020s = 50Hz.
+    // 1. Configurar Periodo (Frecuencia)
+    // Servos analógicos estándar (SG90, MG996R) funcionan a 50Hz (20ms).
     // @warning Usar frecuencias mayores (>60Hz) puede sobrecalentar o quemar servos analógicos.
     _servo.setPeriodHertz(50);
 
-    // 2. Asignar Pin y Rango de Pulso (Pulse Width)
+    // 2. Configurar Anchos de Pulso (Pulse Width)
     // Definimos la correspondencia entre señal eléctrica (microsegundos) y giro físico.
     // - Estándar Teórico RC: 1000us (0°) a 2000us (180°).
-    // - Rango Extendido (Hardware Real): 500us a 2400us.
-    //   Se usa este rango ampliado para garantizar que alcanzamos los topes mecánicos
-    //   reales (0° y 180°) de servos económicos que no son precisos con el estándar teórico.
+    // - Rango Extendido (Hardware Real): 500us (0°) a 2400us (180°).
+    // Usamos este rango amplio para asegurar que servos económicos alcancen su recorrido completo.
     _servo.attach(_pin, 500, 2400);
 
-    // 3. Posición inicial segura
+    // 3. Posición Inicial
     center();
 }
 
@@ -51,13 +54,13 @@ void SteeringServo::turnRight()
 
 void SteeringServo::write(int angle)
 {
-    // Saturación de seguridad: Nunca exceder los límites configurados
-    // Asumimos que Left < Right. Si fuera al revés, la lógica de constrain cambia.
-    // Para simplificar, forzamos el valor entre el menor y el mayor de los límites.
+    // --- CAPA DE SEGURIDAD (HARDWARE PROTECTION) ---
+    // Función constrain(val, min, max):
+    // Si val < min -> devuelve min.
+    // Si val > max -> devuelve max.
+    // Esto impide físicamente que el servo reciba una orden que rompa la dirección.
+    // Si fuera al revés, la lógica de constrain cambia.
+    int safeAngle = constrain(angle, _minLimit, _maxLimit);
 
-    int minLimit = min(_angleLeft, _angleRight);
-    int maxLimit = max(_angleLeft, _angleRight);
-
-    int safeAngle = constrain(angle, minLimit, maxLimit);
     _servo.write(safeAngle);
 }

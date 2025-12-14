@@ -92,3 +92,11 @@ El GPIO 12 determina el voltaje interno de la memoria flash (VDD_SDIO) durante e
 - **Riesgo:** Si este pin se encuentra en estado ALTO (HIGH) durante el reinicio, el ESP32 configurará el voltaje de flash a 1.8V en lugar de 3.3V, provocando un fallo de arranque ("Flash voltage mismatch").
 - **Decisión de Diseño:** En la fase actual (MVP), este pin se deja **DESCONECTADO** para garantizar la estabilidad del sistema y evitar la necesidad de desconectar cables manualmente en cada reinicio.
 - **Futuro (I+D):** Se evaluará su uso para implementar un diferencial electrónico en fases avanzadas, considerando circuitos de aislamiento o pull-down externos.
+
+### D. Conectividad mDNS (rover.local) en Hotspots Móviles
+
+Si utilizas un iPhone/Android como punto de acceso ("Compartir Internet"):
+
+- **Síntoma:** Puedes acceder por IP (`http://172.20.10.x/stream`) pero **NO** por nombre (`http://rover.local/stream`).
+- **Causa:** La mayoría de sistemas operativos móviles bloquean el tráfico Multicast (mDNS) en modo Hotspot para ahorrar batería y seguridad.
+- **Solución:** Usar siempre la dirección IP directa cuando se esté en campo con datos móviles. Reservar `rover.local` para redes WiFi domésticas (Routers).

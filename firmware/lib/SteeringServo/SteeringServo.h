@@ -1,9 +1,11 @@
 /**
  * @file SteeringServo.h
- * @brief Controlador de dirección para servo (Ackermann).
- * @details Encapsula la librería ESP32Servo y gestiona los límites físicos
- * definidos en la configuración para evitar daños mecánicos.
+ * @brief Controlador de Dirección Ackermann (Servo).
  * @author Alejandro Moyano (@AleSMC)
+ * @version 1.0.0
+ * @details
+ * Wrapper sobre la librería ESP32Servo que añade una capa de seguridad (Hard Limits).
+ * Traduce comandos lógicos (0-180 grados) a señales PWM protegidas físicamente.
  */
 
 #pragma once
@@ -13,45 +15,53 @@
 class SteeringServo
 {
 private:
-    Servo _servo;     ///< Objeto servo de bajo nivel
-    int _pin;         ///< Pin GPIO
-    int _angleCenter; ///< Ángulo central calibrado
-    int _angleLeft;   ///< Límite izquierdo calibrado
-    int _angleRight;  ///< Límite derecho calibrado
+    Servo _servo; ///< Instancia del driver de bajo nivel
+    int _pin;     ///< Pin GPIO de señal PWM
+
+    // --- Parámetros de Calibración ---
+    int _angleCenter; ///< Valor calibrado para ir recto
+    int _angleLeft;   ///< Límite físico izquierdo
+    int _angleRight;  ///< Límite físico derecho
+
+    // --- Límites de Seguridad (Calculados) ---
+    int _minLimit; ///< El valor numérico más bajo permitido (ej: 70)
+    int _maxLimit; ///< El valor numérico más alto permitido (ej: 110)
 
 public:
     /**
-     * @brief Constructor.
-     * @param pin Pin GPIO del servo.
-     * @param center Ángulo para ir recto (aprox 90).
-     * @param leftMax Ángulo máximo izquierda.
-     * @param rightMax Ángulo máximo derecha.
+     * @brief Constructor con límites físicos.
+     * @param pin GPIO del servo.
+     * @param center Ángulo central (idealmente 90).
+     * @param leftMax Ángulo máximo hacia la izquierda.
+     * @param rightMax Ángulo máximo hacia la derecha.
      */
     SteeringServo(int pin, int center, int leftMax, int rightMax);
 
     /**
-     * @brief Inicializa el servo y lo coloca en el centro.
+     * @brief Inicializa el PWM del servo a 50Hz.
      */
     void begin();
 
     /**
-     * @brief Gira las ruedas al centro (Recto).
+     * @brief Coloca las ruedas rectas.
      */
     void center();
 
     /**
-     * @brief Gira todo lo posible a la izquierda (según límite).
+     * @brief Gira al tope izquierdo permitido.
      */
     void turnLeft();
 
     /**
-     * @brief Gira todo lo posible a la derecha (según límite).
+     * @brief Gira al tope derecho permitido.
      */
     void turnRight();
 
     /**
-     * @brief Control fino (opcional).
-     * @param angle Ángulo absoluto (0-180). Se recorta a los límites seguros.
+     * @brief Mueve el servo a un ángulo específico con seguridad.
+     * @param angle Ángulo objetivo (0-180).
+     * @note Si el ángulo excede los límites configurados, se recorta (clamping)
+     * automáticamente para no forzar el mecanismo.
      */
     void write(int angle);
 };

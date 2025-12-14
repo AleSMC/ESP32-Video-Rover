@@ -1,6 +1,6 @@
 /**
  * @file SolidAxle.cpp
- * @brief Implementación de la lógica de control de tracción SolidAxle (Fwd-Only).
+ * @brief Implementación del driver de motores L298N para ESP32.
  * @author Alejandro Moyano (@AleSMC)
  */
 
@@ -16,81 +16,83 @@ SolidAxle::SolidAxle(int pinFwd, int pinRev, int pinPWM)
 
 void SolidAxle::begin()
 {
-    // 1. Configurar pines digitales como salida
+    // 1. Configuración de Pines (Salida Digital)
     pinMode(_pinFwd, OUTPUT);
     pinMode(_pinRev, OUTPUT);
     pinMode(_pinPWM, OUTPUT);
 
-    // 2. Configurar periférico PWM (LEDC para ESP32)
+    // 2. Configuración del Periférico PWM (LEDC)
+    // El ESP32 no usa analogWrite(), usa el controlador LEDC hardware.
     ledcSetup(_pwmChannel, _pwmFreq, _pwmResolution);
     ledcAttachPin(_pinPWM, _pwmChannel);
 
-    // 3. Estado inicial seguro (Frenado activo)
+    // 3. Estado Inicial Seguro
     brake();
 }
 
 void SolidAxle::brake()
 {
+    // Lógica L298N: IN1=LOW, IN2=LOW, ENA=HIGH -> Freno Corto (Short Brake)
     digitalWrite(_pinFwd, LOW);
     digitalWrite(_pinRev, LOW);
-    ledcWrite(_pwmChannel, 255); // Enable ON + Inputs LOW = Freno Magnético
+    ledcWrite(_pwmChannel, 255);
     _velocidadActual = 0;
 }
 
 void SolidAxle::coast()
 {
+    // Lógica L298N: ENA=LOW -> Motor Deshabilitado (Free Run)
     digitalWrite(_pinFwd, LOW);
     digitalWrite(_pinRev, LOW);
-    ledcWrite(_pwmChannel, 0); // Enable OFF = Alta Impedancia (Motor desconectado)
+    ledcWrite(_pwmChannel, 0);
     _velocidadActual = 0;
 }
 
 void SolidAxle::drive(int velocidad)
 {
-    // --- 1. VALIDACIÓN DE RANGO ---
+    // --- 1. VALIDACIÓN DE INTEGRIDAD ---
     if (velocidad > 255 || velocidad < -255)
     {
-        Serial.printf("[ERROR] SolidAxle: Velocidad (%d) fuera de rango [-255, 255]. Comando ignorado.\n", velocidad);
+        Serial.printf("[ERROR] Motor: Velocidad %d fuera de rango. Ignorado.\n", velocidad);
         return;
     }
 
-    // --- 2. RESTRICCIÓN DE SEGURIDAD (BLOQUEO DE REVERSA) ---
-    // @warning INSTRUCCIONES PARA ACTIVAR REVERSA:
-    // Para habilitar la marcha atrás, comenta el siguiente bloque 'if'.
-    // ¡PELIGRO!: Al hacerlo, eliminas la protección del firmware. Debes garantizar
-    // desde el software cliente (PC) que el coche se detiene completamente antes
-    // de invertir el sentido, o dañarás el driver por picos de corriente (Back-EMF).
+    // --- 2. PROTECCIÓN DE HARDWARE (BLOQUEO DE REVERSA) ---
+    // @warning La inversión brusca de marcha genera corrientes de retorno (Back-EMF)
+    // que pueden quemar el driver L298N o reiniciar el ESP32.
+    // En esta fase, bloqueamos la reversa hasta implementar "Dynamic Dead Time" en el cliente.
     if (velocidad < 0)
     {
-        Serial.printf("[ERROR] SolidAxle: Velocidad (%d). Reversa bloqueada por seguridad. Comenta este bloque para activar.\n", velocidad);
+        // Comentar if() solo bajo tu propia responsabilidad y con lógica de parada previa.
+        Serial.printf("[WARN] Reversa solicitada. Bloqueada por seguridad.\n");
         brake();
         return;
     }
 
-    // --- 3. ZONA MUERTA / COAST ---
+    // --- 3. ZONA MUERTA (Deadzone) ---
+    // Los motores DC baratos no tienen torque suficiente para moverse con PWM muy bajo.
+    // Cortamos la señal para evitar zumbidos eléctricos sin movimiento.
     if (abs(velocidad) < 15)
     {
         coast();
         return;
     }
 
-    // --- 4. CONTROL DE DIRECCIÓN Y POTENCIA ---
+    // --- 4. APLICACIÓN DE POTENCIA ---
     if (velocidad > 0)
     {
-        // Marcha Adelante
+        // Configuración Avance: IN1=HIGH, IN2=LOW
         digitalWrite(_pinFwd, HIGH);
         digitalWrite(_pinRev, LOW);
     }
-    else if (velocidad < 0) // Este código se activará solo si comentas el Bloque 2
+    else if (velocidad < 0)
     {
-        // Marcha Atrás
+        // Configuración Retroceso: IN1=LOW, IN2=HIGH
         digitalWrite(_pinFwd, LOW);
         digitalWrite(_pinRev, HIGH);
     }
 
-    // Aplicamos el valor absoluto al PWM
+    // El PWM siempre es positivo (magnitud del vector velocidad)
     ledcWrite(_pwmChannel, abs(velocidad));
-
-    // Actualizamos el registro de estado
     _velocidadActual = velocidad;
 }

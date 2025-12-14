@@ -1,11 +1,12 @@
 /**
  * @file SolidAxle.h
- * @brief Controlador de tracción unificada (Topología Eje Sólido) para ESP32.
- * @details Gestiona la velocidad (PWM global) y el sentido de giro unificado de los motores,
- * incluyendo lógica de seguridad "Dead Time" para proteger el driver contra picos de corriente
- * por inversión de marcha (Back-EMF).
- * @board ESP32-CAM (AI Thinker)
+ * @brief Controlador de Tracción Unificada (Topología Eje Sólido).
  * @author Alejandro Moyano (@AleSMC)
+ * @version 1.0.0
+ * @details
+ * Gestiona dos motores DC conectados en paralelo (mismo PWM, misma Dirección).
+ * Abstrae la lógica del puente H (L298N) y provee métodos de seguridad para
+ * evitar picos de corriente inductiva (Back-EMF).
  */
 
 #pragma once
@@ -14,53 +15,56 @@
 class SolidAxle
 {
 private:
-    // --- Pines de Hardware ---
-    int _pinFwd; ///< Pin para marcha adelante (IN1+IN3)
-    int _pinRev; ///< Pin para marcha atrás (IN2+IN4)
-    int _pinPWM; ///< Pin para velocidad global (ENA+ENB)
+    // --- Pines de Hardware (Configuración L298N) ---
+    int _pinFwd; ///< Pin lógico para activar puente H en sentido horario
+    int _pinRev; ///< Pin lógico para activar puente H en sentido anti-horario
+    int _pinPWM; ///< Pin de Habilitación (Enable) para modulación de ancho de pulso
 
     // --- Estado Interno ---
-    int _velocidadActual; ///< Estado actual (-255 a 255)
+    int _velocidadActual; ///< Última velocidad comandada (-255 a 255)
 
     // --- Configuración PWM (ESP32 LEDC) ---
-    const int _pwmFreq = 1000;    ///< Frecuencia base 1kHz
-    const int _pwmChannel = 0;    ///< Canal 0 del temporizador
-    const int _pwmResolution = 8; ///< Resolución de 8 bits (0-255)
+    const int _pwmFreq = 1000;    ///< Frecuencia 1kHz (Óptima para motores DC genéricos)
+    const int _pwmChannel = 0;    ///< Canal PWM 0
+    const int _pwmResolution = 8; ///< Resolución 8 bits (Rango 0-255)
 
 public:
     /**
-     * @brief Constructor del sistema de tracción.
-     * @param pinFwd Pin GPIO conectado a la dirección Adelante.
-     * @param pinRev Pin GPIO conectado a la dirección Atrás.
-     * @param pinPWM Pin GPIO conectado a la habilitación (Enable/PWM).
+     * @brief Constructor del driver.
+     * @param pinFwd GPIO conectado a IN1+IN3.
+     * @param pinRev GPIO conectado a IN2+IN4.
+     * @param pinPWM GPIO conectado a ENA+ENB.
      */
     SolidAxle(int pinFwd, int pinRev, int pinPWM);
 
     /**
-     * @brief Inicializa los periféricos y configura el PWM.
-     * @note Debe llamarse dentro del setup() de Arduino.
+     * @brief Inicializa los pines GPIO y el periférico LEDC (PWM).
+     * @note Estado inicial: Freno activado.
      */
     void begin();
 
     /**
-     * @brief Controla el movimiento del vehículo con seguridad.
-     * @param velocidad Valor con signo:
-     * - Positivo (1 a 255): Marcha Adelante.
-     * - Negativo (-1 a -255): Marcha Atrás.
-     * - Cero (0): Activa modo Coasting (Inercia).
-     * @warning Si se envía un valor fuera de rango [-255, 255], se registra un ERROR en consola y el comando se ignora.
+     * @brief Comando principal de movimiento.
+     * @param velocidad Valor con signo [-255 a 255].
+     * - Positivo: Avance.
+     * - Negativo: Retroceso (Bloqueado por defecto en Fase A).
+     * - 0: Coast (Inercia).
+     * @warning Incluye protección de rango. Valores >255 son ignorados.
      */
     void drive(int velocidad);
 
     /**
      * @brief Freno Magnético (Short Brake).
-     * @details Conecta ambos terminales del motor a GND, deteniendo el giro bruscamente.
+     * @details Pone los pines de control en LOW y el PWM al máximo.
+     * Esto cortocircuita las bobinas del motor, generando una fuerza contraelectromotriz
+     * que detiene el eje rápidamente.
      */
     void brake();
 
     /**
-     * @brief Inercia (Coasting).
-     * @details Desconecta el puente H (Alta impedancia). El motor gira libremente.
+     * @brief Modo Inercia (Coasting).
+     * @details Deshabilita el puente H (Alta Impedancia).
+     * El motor queda desconectado eléctricamente y gira libremente por inercia.
      */
     void coast();
 };

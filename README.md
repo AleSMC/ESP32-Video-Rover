@@ -14,7 +14,8 @@ Este proyecto implementa un rover controlado remotamente utilizando un **ESP32-C
     │   │   ├── SolidAxle/      # Driver de tracción (Topología Eje Sólido)
     │   │   ├── SteeringServo/  # Driver de dirección (Servo Ackermann)
     │   │   ├── NetworkManager/ # Gestor de conectividad (WiFi STA/AP + mDNS)
-    │   │   └── CameraServer/   # Driver de video (OV2640 + Servidor Web MJPEG)
+    │   │   ├── CameraServer/   # Driver de video (OV2640 + Servidor Web MJPEG)
+    │   │   └── RemoteControl/  # Protocolo UDP y Lógica de Failsafe (Nuevo)
     │   ├── examples/           # Tests unitarios preservados (Motores, Servo, LED)
     │   └── platformio.ini      # Configuración del entorno de compilación
     ├── software/               # Cliente PC (Python + OpenCV + UDP)
@@ -87,7 +88,20 @@ Para ver logs de depuración (IP asignada, estado de motores):
   - _El Rover se conecta automáticamente al WiFi configurado o crea su propio Punto de Acceso._
 - [x] **Paso C.2:** Transmisión de Video (Cámara OV2640).
   - _Servidor Web asíncrono con streaming MJPEG de baja latencia._
-- [ ] **Paso D:** Protocolo de Control UDP.
+- [x] **Paso D:** Protocolo de Control UDP.
+  - **Arquitectura:** Comunicación unidireccional (Fire-and-Forget) para baja latencia.
+  - **Puerto:** `9999` (Configurable en `config.h`).
+  - **Frecuencia de Actualización:** ~20Hz (50ms) recomendado desde el cliente.
+  - **Estructura del Paquete (Binario - 2 Bytes):**
+    - `Byte[0]` **Tracción:**
+      - `0`: Coast (Inercia / Soltar acelerador).
+      - `1`: Brake (Frenado Activo).
+      - `2 - 255`: Valor PWM directo para avance (Forward).
+    - `Byte[1]` **Dirección:**
+      - `0 - 180`: Ángulo del servo (Grados reales).
+      - El firmware aplica `constrain()` interno para respetar los límites físicos (`STEERING_LEFT_MAX`, `STEERING_RIGHT_MAX`).
+  - **Seguridad (Failsafe):**
+    - Si el Rover no recibe paquetes válidos en **500ms**, se activa el **Frenado de Emergencia** (`checkFailsafe`) y se centran las ruedas automáticamente.
 - [ ] **Paso E:** Cliente Python (PC).
   - Implementación de Video y Control Básico.
   - Implementación de **"Caja de Cambios"** (Shift=Lento, Espacio=Turbo, Nada=Normal).
