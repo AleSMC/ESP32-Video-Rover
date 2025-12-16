@@ -41,6 +41,9 @@ void RemoteControl::listen()
     {
         _udp.read(_packetBuffer, 2); // Leemos solo los 2 bytes relevantes
 
+        // DEBUG: Mostrar datos recibidos
+        // Serial.printf("[UDP] Motor: %d | Servo: %d\n", _packetBuffer[0], _packetBuffer[1]);
+
         // 1. WATCHDOG RESET
         // Hemos recibido señal de vida del controlador, reseteamos el temporizador.
         _lastPacketTime = millis();

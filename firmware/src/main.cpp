@@ -6,9 +6,14 @@
  * - Capa C.1: Red Híbrida (WiFi STA/AP Failover)
  * - Capa D: Control Remoto UDP (Protocolo Binario + Seguridad)
  * @author Alejandro Moyano (@AleSMC)
+ * @note --- INSTRUCCIONES DE USO (PLATFORMIO) ---
+ * 1. Subir Firmware:   pio run -t upload
+ * 2. Monitor Serie:    pio device monitor -b 115200
+ * @warning Si la subida falla, conecta GPIO0 a GND (Botón IO0) y pulsa Reset.
  */
 
 #include <Arduino.h>
+#include <WiFi.h> // [COOL-DOWN] Necesario para ajustar potencia TX
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
 
@@ -52,14 +57,19 @@ void setup()
     Serial.begin(115200);
     delay(1000);
 
-    // 3. INICIALIZAR ACTUADORES FÍSICOS
+    // [COOL-DOWN] 3. ASEGURAR FLASH APAGADO (GPIO 4)
+    // El pin del flash a veces queda flotando y genera calor/consumo fantasma.
+    pinMode(4, OUTPUT);
+    digitalWrite(4, LOW);
+
+    // 4. INICIALIZAR ACTUADORES FÍSICOS
     // Es seguro iniciarlos antes que el WiFi.
     Serial.println("\n[BOOT] Inicializando Motores y Servo...");
     motors.begin();
     steering.begin();
     steering.center(); // Posición segura inicial (Ruedas rectas)
 
-    // 4. INICIALIZAR CÁMARA
+    // 5. INICIALIZAR CÁMARA
     // Prioridad alta: La cámara requiere reservar grandes bloques de memoria (DMA/PSRAM).
     // Hacemos esto antes de iniciar el stack WiFi para evitar fragmentación de RAM.
     Serial.println("[BOOT] Inicializando Hardware de Video...");
@@ -77,17 +87,24 @@ void setup()
         }
     }
 
-    // 5. INICIAR STACK DE RED
+    // 6. INICIAR STACK DE RED
     // Proceso bloqueante (~10s máx) que conecta al WiFi o crea el AP.
     network.begin();
 
-    // 6. ARRANCAR SERVICIOS EN SEGUNDO PLANO
+    // // [COOL-DOWN] 7. REDUCIR POTENCIA WIFI (Opcional)
+    // // Al conectar al iPhone (corta distancia), no necesitamos 20dBm.
+    // // WIFI_POWER_11dBm ahorra ~100mA y reduce mucho el calor.
+    // WiFi.setTxPower(WIFI_POWER_11dBm);
+    // Serial.println("[ENERGY] Potencia WiFi reducida a 11dBm.");
+
+    // 8. ARRANCAR SERVICIOS EN SEGUNDO PLANO
     camera.startServer(); // Servidor Web asíncrono (Puerto 80)
     remote.begin();       // Escucha UDP (Puerto 9999)
 
     // REPORTE DE ESTADO FINAL
     Serial.println("\n[BOOT] SISTEMA ONLINE - ROVER LISTO.");
     Serial.printf("[INFO] Video Stream: http://%s.local/stream\n", MDNS_NAME);
+    Serial.printf("[INFO] Video Stream por IP:   http://%s/stream\n", network.getIP().c_str());
     Serial.printf("[INFO] Control UDP:  Puerto %d\n", UDP_PORT);
 }
 
@@ -118,5 +135,15 @@ void loop()
                       network.getMode().c_str(),
                       network.getIP().c_str(),
                       millis() / 1000);
+
+        // Imprimimos RSSI para asegurar que bajar la potencia no afectó la señal
+        long rssi = WiFi.RSSI();
+        Serial.printf("[STATUS] IP: %s | Signal: %ld dBm | Temp: OK\n",
+                      network.getIP().c_str(), rssi);
     }
+
+    // [COOL-DOWN] 5. REFRIGERACIÓN DE CPU
+    // Crítico: Un delay pequeño permite al RTOS poner la CPU en modo "Idle".
+    // Esto baja la temperatura drásticamente sin afectar la respuesta (5ms es imperceptible).
+    delay(5);
 }

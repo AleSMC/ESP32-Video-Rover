@@ -98,4 +98,4 @@ const int HTTP_PORT = 80;
  * @details Si pasan 500ms sin recibir comandos válidos, el Watchdog de software
  * detendrá los motores para evitar que el robot se escape si pierde WiFi.
  */
-const int UDP_FAILSAFE_MS = 500;
+const int UDP_FAILSAFE_MS = 1000;

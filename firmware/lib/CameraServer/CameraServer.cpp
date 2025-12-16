@@ -65,11 +65,16 @@ bool CameraServer::init()
     config.pin_pclk = PCLK_GPIO_NUM;
     config.pin_vsync = VSYNC_GPIO_NUM;
     config.pin_href = HREF_GPIO_NUM;
-    config.pin_sscb_sda = SIOD_GPIO_NUM;
-    config.pin_sscb_scl = SIOC_GPIO_NUM;
+    config.pin_sccb_sda = SIOD_GPIO_NUM;
+    config.pin_sccb_scl = SIOC_GPIO_NUM;
     config.pin_pwdn = PWDN_GPIO_NUM;
     config.pin_reset = RESET_GPIO_NUM;
-    config.xclk_freq_hz = 20000000;       // 20MHz (Estable)
+
+    // BAJAR LA VELOCIDAD DEL RELOJ (CRÍTICO)
+    // Por defecto está en 20000000 (20MHz).
+    // Al bajarlo a 10MHz, la cámara procesa más lento físicamente.
+    // Esto limita los FPS a unos 10-15 estables, liberando la CPU y el WiFi.
+    config.xclk_freq_hz = 15000000;       // 15MHz
     config.pixel_format = PIXFORMAT_JPEG; // El hardware comprime a JPEG nativamente
 
     // --- 2. OPTIMIZACIÓN PARA STREAMING FLUIDO (RC) ---
@@ -77,22 +82,25 @@ bool CameraServer::init()
     // ofrece el mejor equilibrio calidad/velocidad para FPV.
     // Resoluciones mayores (SVGA/HD) introducen lag inaceptable para conducción.
     config.frame_size = FRAMESIZE_QVGA;
-    config.jpeg_quality = 15; // Rango 0-63 (10-15 es ideal para streaming fluido)
-    config.fb_count = 2;      // Doble Buffer: Clave para mantener FPS altos
+    config.jpeg_quality = 60; // Rango 0-63 (10-15 es ideal para streaming fluido)
 
     // 3. Verificación de Memoria Externa (PSRAM)
     // El video requiere mucha RAM. Si no hay PSRAM, bajamos la calidad para no crashear.
     // Chip ESP32 tiene poca RAM interna. La PSRAM (4MB) es vital para video.
     if (psramFound())
     {
-        Serial.println("[CAM] PSRAM detectada. Modo Alto Rendimiento activado.");
+        // Serial.println("[CAM] PSRAM detectada. Modo Alto Rendimiento activado.");
+        // config.grab_mode = CAMERA_GRAB_LATEST; // Siempre el frame más reciente
+        // config.fb_count = 2;                   // Doble Buffer: Clave para mantener FPS altos
+
+        config.fb_count = 1;                       // S 1 frame
+        config.grab_mode = CAMERA_GRAB_WHEN_EMPTY; // No descartamos frames.
     }
     else
     {
         Serial.println("[CAM] WARNING: No PSRAM. Reduciendo buffers.");
-        config.frame_size = FRAMESIZE_QVGA;
-        config.jpeg_quality = 18;
-        config.fb_count = 1; // Sin PSRAM solo cabe 1 frame
+        config.fb_count = 1;                       // Sin PSRAM solo cabe 1 frame
+        config.grab_mode = CAMERA_GRAB_WHEN_EMPTY; // No tenemos memoria para descartar frames.
     }
 
     // 4. Iniciar Driver
@@ -156,6 +164,12 @@ esp_err_t CameraServer::streamHandler(httpd_req_t *req)
         // Si el cliente cierra la conexión, salimos del bucle
         if (res != ESP_OK)
             break;
+
+        // --- ESTABILIDAD (THROTTLING) ---
+        // Hacemos una pausa de 20ms para dejar que el WiFi respire.
+        // Esto permite que los paquetes UDP entren sin chocar con el video.
+        // Matemáticamente: Envío + 20ms pausa = aprox 15-20 FPS estables.
+        delay(20);
     }
     return res;
 }
