@@ -30,7 +30,7 @@ La fuente de la verdad es `docs/hardware_setup.md`.
    - **Protocolo:** Video HTTP (Puerto 80) + Control UDP (Puerto 9999).
 2. **Estabilidad y Seguridad:**
    - **Brownout:** Desactivar `RTC_CNTL_BROWN_OUT_REG` en setup siempre.
-   - **Failsafe:** Watchdog UDP 500ms (Parar motores si no hay datos).
+   - **Failsafe:** Watchdog UDP 1000ms (Parar motores si no hay datos).
    - **PlatformIO:** `huge_app.csv`, `upload_speed = 115200`, `monitor_filters = esp32_exception_decoder`.
 3. **Excelencia en GitOps:**
    - **Preservación:** Código de test funcional (Motores, LED) se mueve a `firmware/examples/` antes de limpiar `main.cpp`.
@@ -58,15 +58,15 @@ _NO avanzar sin confirmación de éxito y commit._
   - Commit: "feat: network layer implementation (STA/AP failover)".
 - [x] **Paso C.2:** Servidor de Video (OV2640).
   - Librería `CameraServer` implementada (Encapsulamiento de esp32-camera).
-  - Streaming MJPEG optimizado para baja latencia (QVGA, 2 buffers).
+  - Streaming MJPEG optimizado para baja latencia (QVGA, Single Buffer/Buffer Único) para latencia cero.
   - Endpoint HTTP: `http://rover.local:80/stream`.
   - Commit: "feat: implement MJPEG video streaming server".
 - [x] **Paso D (COMPLETADO):** Protocolo UDP.
   - Librería `RemoteControl` implementada.
   - Protocolo Binario (2 Bytes: Tracción/Dirección).
-  - Seguridad: Cache de estado (anti-redundancia) y Failsafe (500ms).
+  - Seguridad: Cache de estado (anti-redundancia) y Failsafe (1000ms).
   - Commit: "feat: implement UDP control protocol with failsafe protection".
-- [ ] **Paso E:** Cliente Python (PC).
+- [x] **Paso E:** Cliente Python (PC).
   - Librerías: Usar `cv2` para renderizado y `socket` nativo.
   - Concurrencia: Gestión UDP en hilo separado (`threading`) para no bloquear el video.
   - Lógica: Implementar "Caja de Cambios" por software (Shift=Lento, Espacio=Turbo)

@@ -100,3 +100,11 @@ Si utilizas un iPhone/Android como punto de acceso ("Compartir Internet"):
 - **Síntoma:** Puedes acceder por IP (`http://172.20.10.x/stream`) pero **NO** por nombre (`http://rover.local/stream`).
 - **Causa:** La mayoría de sistemas operativos móviles bloquean el tráfico Multicast (mDNS) en modo Hotspot para ahorrar batería y seguridad.
 - **Solución:** Usar siempre la dirección IP directa cuando se esté en campo con datos móviles. Reservar `rover.local` para redes WiFi domésticas (Routers).
+
+### E. Optimización de Interferencias WiFi (Canal 11)
+
+En entornos saturados (Universidades, Eventos), el canal 1 suele estar inutilizable.
+
+- **Hardware:** Se ha eliminado la restricción de potencia (WiFi.setTxPower) permitiendo al ESP32 gestionar dinámicamente sus 20dBm para mantener el enlace estable incluso con ruido electromagnético de los motores.
+
+- **Configuración de Cámara:** Se ha reducido la frecuencia del reloj XCLK a 15MHz y aumentado la compresión JPEG a 60. Esto reduce el ancho de banda necesario, haciendo el sistema más robusto frente a interferencias físicas.

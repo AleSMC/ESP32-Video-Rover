@@ -15,10 +15,16 @@ Este proyecto implementa un rover controlado remotamente utilizando un **ESP32-C
     │   │   ├── SteeringServo/  # Driver de dirección (Servo Ackermann)
     │   │   ├── NetworkManager/ # Gestor de conectividad (WiFi STA/AP + mDNS)
     │   │   ├── CameraServer/   # Driver de video (OV2640 + Servidor Web MJPEG)
-    │   │   └── RemoteControl/  # Protocolo UDP y Lógica de Failsafe (Nuevo)
+    │   │   └── RemoteControl/  # Protocolo UDP y Lógica de Failsafe
     │   ├── examples/           # Tests unitarios preservados (Motores, Servo, LED)
     │   └── platformio.ini      # Configuración del entorno de compilación
     ├── software/               # Cliente PC (Python + OpenCV + UDP)
+    │   ├── modules/            # Módulos de lógica desacoplada
+    │   │   ├── __init__.py     # Inicializador de paquete Python
+    │   │   ├── KeyboardPilot.py # Driver de Teclado (pynput + Prioridades)
+    │   │   └── VideoStream.py   # Decodificador de Video Asíncrono (Threading)
+    │   ├── main.py             # Ejecutable Principal (Bucle de Control)
+    │   └── requirements.txt    # Dependencias (opencv, pynput, numpy)
     ├── docs/                   # Documentación técnica, diagramas y notas
     └── README.md               # Este archivo
 
@@ -101,13 +107,42 @@ Para ver logs de depuración (IP asignada, estado de motores):
       - `0 - 180`: Ángulo del servo (Grados reales).
       - El firmware aplica `constrain()` interno para respetar los límites físicos (`STEERING_LEFT_MAX`, `STEERING_RIGHT_MAX`).
   - **Seguridad (Failsafe):**
-    - Si el Rover no recibe paquetes válidos en **500ms**, se activa el **Frenado de Emergencia** (`checkFailsafe`) y se centran las ruedas automáticamente.
-- [ ] **Paso E:** Cliente Python (PC).
-  - Implementación de Video y Control Básico.
-  - Implementación de **"Caja de Cambios"** (Shift=Lento, Espacio=Turbo, Nada=Normal).
+    - Si el Rover no recibe paquetes válidos en **1000ms**, se activa el **Frenado de Emergencia** (`checkFailsafe`) y se centran las ruedas automáticamente.
+- [x] **Paso E:** Cliente Python (PC).
+  - **Input:** Migración a `pynput` (Hardware Input) para soporte de diagonales (W+A) y combos (Shift/Space).
+  - **Video:** Decodificación asíncrona en hilo dedicado (`threading`) para eliminar lag de renderizado.
+  - **Red:** Rate Limiting (10Hz) para evitar saturación del buffer RX del ESP32.
 - [ ] **Paso EXTRA (Bonus):** Control de Reversa Dinámica.
   - Implementar lógica de seguridad en Python para calcular el tiempo de frenado necesario según la velocidad previa antes de enviar el comando de reversa.
 - [ ] **Fase I+D (Bonus):** Investigación de Diferencial Electrónico. Evaluar viabilidad de uso seguro del GPIO 12 (Strapping Pin) para control independiente de motores.
+
+## 💻 Arquitectura de Software (Cliente PC)
+
+El cliente Python (`software/main.py`) ha sido diseñado siguiendo patrones de **Sistemas de Tiempo Real** para desacoplar la visión del control.
+
+### 1. Pipeline de Video Asíncrono (`VideoStream.py`)
+
+A diferencia de los ejemplos básicos de OpenCV que bloquean el bucle principal, este sistema utiliza `threading`:
+
+- **Hilo Secundario:** Descarga frames MJPEG constantemente y mantiene solo el último en memoria (`buffer_size=1`). Si el procesamiento es lento, descarta frames viejos (Drop Frame) para garantizar que siempre vemos el "presente".
+- **Hilo Principal:** Solo se encarga de pintar la imagen ya decodificada, garantizando 0ms de bloqueo en el control.
+
+### 2. Pilotaje por Interrupción de Hardware (`KeyboardPilot.py`)
+
+Uso de la librería **`pynput`**:
+
+- **Ventaja:** Lee el estado físico de las teclas (Press/Release events).
+- **Capacidad:** Permite combinaciones complejas como **Drift (W+A+Space)**, diagonales perfectas y control de velocidad variable (Shift para precisión) sin "ghosting".
+- **Lógica de Prioridad:**
+  1. `S` (Freno) > `W` (Acelerador).
+  2. `Shift` (Precisión) > `Space` (Turbo) > Normal.
+
+### 3. Gestión de Tráfico UDP (Rate Limiting)
+
+El ESP32 tiene una sola antena (Half-Duplex). Para evitar colisiones entre la subida de Video y la bajada de Comandos:
+
+- El cliente limita el envío de paquetes UDP a **200ms (5Hz)**.
+- Esto libera el espectro aéreo el 90% del tiempo, permitiendo que el video fluya sin interrupciones.
 
 ---
 
