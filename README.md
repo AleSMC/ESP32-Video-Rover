@@ -111,7 +111,7 @@ Para ver logs de depuración (IP asignada, estado de motores):
 - [x] **Paso E:** Cliente Python (PC).
   - **Input:** Migración a `pynput` (Hardware Input) para soporte de diagonales (W+A) y combos (Shift/Space).
   - **Video:** Decodificación asíncrona en hilo dedicado (`threading`) para eliminar lag de renderizado.
-  - **Red:** Rate Limiting (10Hz) para evitar saturación del buffer RX del ESP32.
+  - **Red:** Rate Limiting (5Hz) para evitar saturación del buffer RX del ESP32.
 - [ ] **Paso EXTRA (Bonus):** Control de Reversa Dinámica.
   - Implementar lógica de seguridad en Python para calcular el tiempo de frenado necesario según la velocidad previa antes de enviar el comando de reversa.
 - [ ] **Fase I+D (Bonus):** Investigación de Diferencial Electrónico. Evaluar viabilidad de uso seguro del GPIO 12 (Strapping Pin) para control independiente de motores.

@@ -16,14 +16,20 @@ class KeyboardPilot:
         # Mapeo de Velocidades PWM
         self.PWM_COAST = 0
         self.PWM_BRAKE = 1
-        self.PWM_SLOW = 130   # Shift (Modo Precisión)
-        self.PWM_NORMAL = 180 # Sin teclas (Modo Crucero)
+
+        # Para PWM_SLOW 130 tiene  aproximadamente un ciclo de trabajo del 50%. 255 es 100%
+        # cosa que mete mucho ruido por los cables y provoca que el  servo se active. 
+        # con 90 tambien se sigue metiendo un poco de ruido pero menos.
+        # asi que ponermos 50 para que sea un poco menos hasta que separemos las fuentes de alimentacion
+        # de los motores y el servo con la esp32.
+        self.PWM_SLOW = 40   # Shift (Modo Precisión) 
+        self.PWM_NORMAL = 190 # Sin teclas (Modo Crucero)
         self.PWM_TURBO = 255  # Espacio + W (Modo Turbo)
         
         # Mapeo de Ángulos
         self.ANGLE_CENTER = 90
-        self.ANGLE_LEFT = 70
-        self.ANGLE_RIGHT = 110
+        self.ANGLE_LEFT = 40
+        self.ANGLE_RIGHT = 140
 
         # --- ESTADO INTERNO ---
         # Usamos un set para guardar qué teclas están físicamente abajo ahora mismo

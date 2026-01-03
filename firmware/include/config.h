@@ -70,12 +70,12 @@
  * Empieza con un valor cercano a 90 (ej: 75) y baja poco a poco hacia 0.
  * Si oyes zumbidos, has llegado al tope físico: retrocede 5 grados inmediatamente.
  */
-#define STEERING_LEFT_MAX 70
+#define STEERING_LEFT_MAX 40
 
 /** @brief Límite Máximo Derecha.
  * Empieza con un valor cercano a 90 (ej: 105) y sube poco a poco hacia 180.
  */
-#define STEERING_RIGHT_MAX 110
+#define STEERING_RIGHT_MAX 140
 
 // =============================================================================
 // 3. CONFIGURACIÓN DE PROTOCOLOS (CONSTANTES DE SISTEMA)
