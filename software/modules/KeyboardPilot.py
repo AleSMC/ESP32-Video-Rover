@@ -1,60 +1,61 @@
 """
 KeyboardPilot.py
 ----------------
-Autor: Alejandro Moyano (@AleSMC)
-Descripción: Lógica de pilotaje basada en hardware (pynput).
-Replica EXACTAMENTE la lógica de prioridades del diseño original
-pero usando eventos de teclado físico para eliminar el lag y permitir diagonales.
+Author: Alejandro Moyano (@AleSMC)
+Description: Hardware-based piloting logic (pynput).
+Replicates EXACTLY the original priority logic but uses physical 
+keyboard events to eliminate lag and allow diagonals.
 """
 
 from pynput import keyboard
 
 class KeyboardPilot:
     def __init__(self):
-        # --- CONFIGURACIÓN DE PARÁMETROS (Tus valores originales) ---
+        # --- PARAMETER CONFIGURATION ---
         
-        # Mapeo de Velocidades PWM
+        # PWM Speed Mapping
         self.PWM_COAST = 0
         self.PWM_BRAKE = 1
-
-        # Para PWM_SLOW 130 tiene  aproximadamente un ciclo de trabajo del 50%. 255 es 100%
-        # cosa que mete mucho ruido por los cables y provoca que el  servo se active. 
-        # con 90 tambien se sigue metiendo un poco de ruido pero menos.
-        # asi que ponermos 50 para que sea un poco menos hasta que separemos las fuentes de alimentacion
-        # de los motores y el servo con la esp32.
-        self.PWM_SLOW = 40   # Shift (Modo Precisión) 
-        self.PWM_NORMAL = 190 # Sin teclas (Modo Crucero)
-        self.PWM_TURBO = 255  # Espacio + W (Modo Turbo)
         
-        # Mapeo de Ángulos
+        # For PWM_SLOW: 130 is approximately 50% duty cycle (255 is 100%).
+        # This causes a lot of electrical noise through the cables and triggers the servo.
+        # With 90, it still introduces some noise, but less.
+        # So we set it to 40 to minimize it until we separate the power sources
+        # for the motors and the ESP32/Servo.
+        self.PWM_SLOW = 40    # Shift (Precision Mode)
+        
+        self.PWM_NORMAL = 190 # No keys (Cruise Mode)
+        self.PWM_TURBO = 255  # Space + W (Turbo Mode)
+        
+        # Angle Mapping
         self.ANGLE_CENTER = 90
-        self.ANGLE_LEFT = 40
-        self.ANGLE_RIGHT = 140
+        self.ANGLE_LEFT = 40   # Calibrated Limit
+        self.ANGLE_RIGHT = 140 # Calibrated Limit
 
-        # --- ESTADO INTERNO ---
-        # Usamos un set para guardar qué teclas están físicamente abajo ahora mismo
+        # --- INTERNAL STATE ---
+        # We use a set to store which keys are physically pressed right now
         self.pressed_keys = set()
 
-        # Iniciamos el "Escucha" del teclado en segundo plano
+        # Start keyboard listener in background
         self.listener = keyboard.Listener(
             on_press=self._on_press,
             on_release=self._on_release)
         self.listener.start()
 
     def _on_press(self, key):
-        """Se activa automáticamente al pulsar una tecla"""
+        """Automatically triggered on key press"""
         try:
-            # Guardamos la letra (ej: 'w')
+            # Save the character (e.g., 'w')
             if hasattr(key, 'char') and key.char:
                 self.pressed_keys.add(key.char.lower())
             else:
-                # Guardamos teclas especiales (Shift, Space, etc)
+                # Save special keys (Shift, Space, etc.)
                 self.pressed_keys.add(key)
         except Exception:
             pass
 
     def _on_release(self, key):
-        """Se activa automáticamente al SOLTAR una tecla"""
+        """Automatically triggered on key release"""
         try:
             if hasattr(key, 'char') and key.char:
                 self.pressed_keys.discard(key.char.lower())
@@ -65,56 +66,57 @@ class KeyboardPilot:
 
     def get_packet(self):
         """
-        Traduce el estado físico del teclado a tu protocolo.
-        Aplica TU LÓGICA exacta de resolución de conflictos.
+        Translates physical keyboard state to protocol.
+        Applies EXACT conflict resolution logic.
         """
-        # 1. Definir qué teclas están activas para facilitar la lectura
+        # 1. Check active keys
         k_w = 'w' in self.pressed_keys
         k_s = 's' in self.pressed_keys
         k_a = 'a' in self.pressed_keys
         k_d = 'd' in self.pressed_keys
         
-        # Teclas especiales en pynput
+        # Special keys in pynput
         k_space = keyboard.Key.space in self.pressed_keys
-        # Shift puede ser izquierdo o derecho
+        
+        # Shift can be Left or Right key
         k_shift = (keyboard.Key.shift in self.pressed_keys) or \
                   (keyboard.Key.shift_l in self.pressed_keys) or \
                   (keyboard.Key.shift_r in self.pressed_keys)
 
-        # --- A. LÓGICA DE DIRECCIÓN (A vs D) ---
+        # --- A. STEERING LOGIC (A vs D) ---
         angle_out = self.ANGLE_CENTER
         
         if k_a and not k_d:
             angle_out = self.ANGLE_LEFT
         elif k_d and not k_a:
             angle_out = self.ANGLE_RIGHT
-        # Si pulsan las dos (A+D) o ninguna -> CENTER (90)
+        # If both (A+D) or neither -> CENTER (90)
 
-        # --- B. LÓGICA DE TRACCIÓN (W vs S vs Space) ---
+        # --- B. TRACTION LOGIC (W vs S vs Space) ---
         pwm_out = self.PWM_COAST
 
-        # CASO 1: Freno Activo (S gana a W en tu lógica)
+        # CASE 1: Active Brake (S wins over W)
         if k_s:
             pwm_out = self.PWM_BRAKE
         
-        # CASO 2: Avance (W pulsada y S no la bloquea)
+        # CASE 2: Drive (W pressed and not blocked by S)
         elif k_w:
-            # Lógica de "Caja de Cambios"
-            # Prioridad 1: Shift (Lento)
+            # Gearbox Logic
+            # Priority 1: Shift (Slow/Precision)
             if k_shift:
                 pwm_out = self.PWM_SLOW
-            # Prioridad 2: Space + W (Turbo)
+            # Priority 2: Space + W (Turbo)
             elif k_space:
                 pwm_out = self.PWM_TURBO
-            # Prioridad 3: Normal
+            # Priority 3: Normal
             else:
                 pwm_out = self.PWM_NORMAL
                 
-        # CASO 3: Freno de Mano (Espacio solo, sin W)
+        # CASE 3: Handbrake (Space only, no W)
         elif k_space and not k_w:
             pwm_out = self.PWM_BRAKE
             
-        # Retornamos el paquete listo
+        # Return packet ready for UDP
         return bytes([int(pwm_out), int(angle_out)])
 
     def stop(self):

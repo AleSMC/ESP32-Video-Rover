@@ -1,6 +1,6 @@
 /**
  * @file NetworkManager.cpp
- * @brief Implementación del Gestor de Red Híbrido (STA + AP).
+ * @brief Hybrid Network Manager Implementation (STA + AP).
  * @author Alejandro Moyano (@AleSMC)
  * @version 1.1.0
  */
@@ -9,25 +9,25 @@
 
 NetworkManager::NetworkManager()
 {
-    _isAP = false; // Estado inicial: Asumimos rol de Cliente (STA)
+    _isAP = false; // Initial state: Assume Client role (STA)
 }
 
 void NetworkManager::begin()
 {
-    // 1. CONFIGURACIÓN INICIAL
-    // Forzamos modo estación para limpiar configuraciones previas
+    // 1. INITIAL CONFIGURATION
+    // Force Station mode to clean previous configurations
     WiFi.mode(WIFI_STA);
 
-    Serial.println("\n[RED] Iniciando gestor de conectividad...");
-    Serial.printf("[RED] Intentando conectar a SSID: %s\n", WIFI_SSID);
+    Serial.println("\n[NET] Starting connectivity manager...");
+    Serial.printf("[NET] Attempting to connect to SSID: %s\n", WIFI_SSID);
 
-    // 2. INTENTO DE CONEXIÓN (STA)
-    // Usa las credenciales definidas en 'secrets.h'
+    // 2. CONNECTION ATTEMPT (STA)
+    // Uses credentials defined in 'secrets.h'
     WiFi.begin(WIFI_SSID, WIFI_PASS);
 
-    // 3. ESPERA ACTIVA CON TIMEOUT (10s)
-    // Bloqueamos el arranque brevemente para intentar conectar.
-    // Si falla, no bloqueamos el sistema eternamente; pasamos al plan B.
+    // 3. ACTIVE WAIT WITH TIMEOUT (10s)
+    // We block boot briefly to attempt connection.
+    // If it fails, we don't block the system eternally; we switch to Plan B.
     unsigned long startAttempt = millis();
     bool connected = false;
 
@@ -43,76 +43,77 @@ void NetworkManager::begin()
     }
     Serial.println();
 
-    // 4. EVALUACIÓN DE RESULTADO Y FAILOVER
+    // 4. RESULT EVALUATION AND FAILOVER
     if (connected)
     {
-        // --- CASO A: ÉXITO (HOGAR) ---
+        // --- CASE A: SUCCESS (HOME) ---
         _isAP = false;
-        Serial.println("[RED] ¡Conexión Exitosa!");
-        Serial.printf("[RED] Modo: ESTACIÓN (Cliente)\n");
-        Serial.printf("[RED] Signal (RSSI): %d dBm\n", WiFi.RSSI());
+        Serial.println("[NET] Connection Successful!");
+        Serial.printf("[NET] Mode: STATION (Client)\n");
+        Serial.printf("[NET] Signal (RSSI): %d dBm\n", WiFi.RSSI());
     }
     else
     {
-        // --- CASO B: FALLO (CAMPO / ERROR) -> MODO EMERGENCIA ---
-        Serial.println("[RED] Timeout. No se pudo conectar al Router.");
-        Serial.println("[RED] ACTIVANDO PROTOCOLO DE EMERGENCIA (Hotspot)...");
+        // --- CASE B: FAILURE (FIELD/ERROR) -> EMERGENCY MODE ---
+        Serial.println("[NET] Timeout. Could not connect to Router.");
+        Serial.println("[NET] ACTIVATING EMERGENCY PROTOCOL (Hotspot)...");
 
-        WiFi.disconnect();  // Limpiar config corrupta
-        WiFi.mode(WIFI_AP); // Cambiar radio a modo Punto de Acceso
+        WiFi.disconnect();  // Clean corrupt config
+        WiFi.mode(WIFI_AP); // Switch radio to Access Point mode
 
-        // Desplegar red propia (Rover-Emergency)
-        // Parámetros: SSID, Pass, Canal, Oculto(no), MaxConexiones
+        // Deploy own network (Rover-Emergency)
+        // Parameters: SSID, Pass, Channel, Hidden(no), MaxConn
         bool apCreated = WiFi.softAP(AP_SSID, AP_PASSWORD, AP_CHANNEL, 0, AP_MAX_CONN);
 
         if (apCreated)
         {
             _isAP = true;
-            Serial.printf("[RED] AP Creado con éxito.\n");
-            Serial.printf("[RED] SSID: %s\n", AP_SSID);
-            Serial.printf("[RED] Password: %s\n", AP_PASSWORD);
+            Serial.printf("[NET] AP Created Successfully.\n");
+            Serial.printf("[NET] SSID: %s\n", AP_SSID);
+            Serial.printf("[NET] Password: %s\n", AP_PASSWORD);
         }
         else
         {
-            Serial.println("[ERROR] CRÍTICO: Fallo al crear AP.");
+            Serial.println("[ERROR] CRITICAL: Failed to create AP.");
         }
     }
 
-    // 5. INICIO SERVICIO mDNS
-    // Permite resolución de nombres 'rover.local' en redes compatibles.
-    // Nota: Android/iOS en modo Hotspot suelen bloquear mDNS.
+    // 5. START mDNS SERVICE
+    // Allows name resolution 'rover.local' on compatible networks.
+    // Note: Android/iOS in Hotspot mode often block mDNS.
     if (MDNS.begin(DEVICE_HOSTNAME))
     {
-        Serial.printf("[RED] mDNS iniciado. Accede vía: http://%s.local\n", DEVICE_HOSTNAME);
+        Serial.printf("[NET] mDNS started. Access via: http://%s.local\n", DEVICE_HOSTNAME);
     }
     else
     {
-        Serial.println("[ERROR] No se pudo iniciar mDNS.");
+        Serial.println("[ERROR] Could not start mDNS.");
     }
 
-    // REPORTE FINAL DE IP
+    // FINAL IP REPORT
     Serial.println("------------------------------------------------");
-    Serial.printf("[INFO] DIRECCIÓN IP: %s\n", getIP().c_str());
+    Serial.printf("[INFO] IP ADDRESS: %s\n", getIP().c_str());
     Serial.println("------------------------------------------------");
 }
 
 void NetworkManager::update()
 {
     /**
-     * @note EXPLICACIÓN TÉCNICA (ESP32 FreeRTOS):
-     * A diferencia de Arduino clásico, el ESP32 ejecuta el stack TCP/IP (LwIP)
-     * en una tarea de FreeRTOS en segundo plano (Core 0 o IDLE).
-     * * No es necesario llamar a una función 'keep_alive' aquí para mantener el WiFi.
-     * La conexión se mantiene sola por hardware/OS.
-     * * Esta función se deja vacía intencionalmente para futura implementación
-     * de lógica de "Reconexión Automática" (Watchdog de Red) si se desea
-     * que el Rover intente volver al WiFi de casa si se cae la señal.
+     * @note TECHNICAL EXPLANATION (ESP32 FreeRTOS):
+     * Unlike classic Arduino, the ESP32 runs the TCP/IP stack (LwIP)
+     * in a background FreeRTOS task (Core 0 or IDLE).
+     *
+     * - It is not necessary to call a 'keep_alive' function here to maintain WiFi.
+     * The connection is maintained by hardware/OS.
+     * - This function is intentionally left empty for future implementation
+     * of "Auto-Reconnect" logic (Network Watchdog) if it is desired
+     * for the Rover to attempt to rejoin Home WiFi if the signal drops.
      */
 }
 
 String NetworkManager::getIP()
 {
-    // Devuelve la IP correcta según el modo activo
+    // Returns the correct IP based on active mode
     if (_isAP)
     {
         return WiFi.softAPIP().toString();
@@ -125,5 +126,5 @@ String NetworkManager::getIP()
 
 String NetworkManager::getMode()
 {
-    return _isAP ? "AP (Hotspot)" : "STA (WiFi Hogar)";
+    return _isAP ? "AP (Hotspot)" : "STA (Home WiFi)";
 }

@@ -1,12 +1,12 @@
 /**
  * @file CameraServer.h
- * @brief Driver de hardware de cámara (OV2640) y Servidor Web de Streaming MJPEG.
+ * @brief Camera Hardware Driver (OV2640) and MJPEG Web Streaming Server.
  * @author Alejandro Moyano (@AleSMC)
  * @version 1.0.0
  * @details
- * Encapsula la gestión de bajo nivel de 'esp_camera' y 'esp_http_server'.
- * Implementa doble buffer para streaming fluido y se adapta automáticamente
- * a la presencia de PSRAM.
+ * Encapsulates low-level management of 'esp_camera' and 'esp_http_server'.
+ * Implements buffering strategies for smooth streaming and automatically adapts
+ * to the presence of PSRAM.
  */
 
 #pragma once
@@ -18,37 +18,37 @@
 class CameraServer
 {
 private:
-    httpd_handle_t _httpServer; // Manejador del servidor web (C-Style pointer)
+    httpd_handle_t _httpServer; // Web server handler (C-Style pointer)
 
 public:
     /**
-     * @brief Constructor por defecto.
-     * Inicializa los punteros internos a NULL.
+     * @brief Default Constructor.
+     * Initializes internal pointers to NULL.
      */
     CameraServer();
 
     /**
-     * @brief Inicializa el sensor OV2640 y el bus I2S/DMA.
-     * @details Configura los 16 pines necesarios, el reloj XCLK a 20MHz y
-     * asigna los buffers de memoria (DMA/PSRAM) para el video.
-     * @return true si la cámara arranca y detecta el sensor, false si falla.
-     * @note En caso de fallo, revisar conexiones físicas y configuración de pines en config.h.
+     * @brief Initializes the OV2640 sensor and I2S/DMA bus.
+     * @details Configures the necessary 16 pins, the XCLK clock (set to 15MHz for stability),
+     * and assigns memory buffers (DMA/PSRAM) for video.
+     * @return true if the camera starts and detects the sensor, false if it fails.
+     * @note In case of failure, check physical connections and pin configuration in config.h.
      */
     bool init();
 
     /**
-     * @brief Inicia el servidor HTTP asíncrono en el puerto 80.
-     * @details Registra la ruta '/stream' que servirá el contenido MJPEG.
+     * @brief Starts the asynchronous HTTP server on port 80.
+     * @details Registers the '/stream' route that serves the MJPEG content.
      */
     void startServer();
 
     /**
-     * @brief Callback estático para servir el flujo de video.
+     * @brief Static callback to serve the video stream.
      * @details
-     * Debe ser estático porque la API de ESP-IDF (C puro) no soporta
-     * métodos de instancia (C++).
-     * @param req Estructura de la petición HTTP entrante.
-     * @return esp_err_t Estado de la operación (ESP_OK o Error).
+     * Must be static because the ESP-IDF API (pure C) does not support
+     * instance methods (C++).
+     * @param req Incoming HTTP request structure.
+     * @return esp_err_t Operation status (ESP_OK or Error).
      */
     static esp_err_t streamHandler(httpd_req_t *req);
 };

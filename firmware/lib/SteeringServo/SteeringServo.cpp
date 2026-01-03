@@ -1,6 +1,6 @@
 /**
  * @file SteeringServo.cpp
- * @brief Implementación del control de servo seguro.
+ * @brief Safe Servo Control Implementation.
  * @author Alejandro Moyano (@AleSMC)
  */
 
@@ -8,8 +8,8 @@
 
 SteeringServo::SteeringServo(int pin, int center, int leftMax, int rightMax)
 {
-    // Calculamos los límites absolutos independientemente de si Izquierda < Derecha o viceversa.
-    // Esto hace el código robusto ante diferentes montajes mecánicos.
+    // Calculate absolute limits regardless of whether Left < Right or vice versa.
+    // This makes the code robust against different mechanical assemblies.
     _minLimit = min(leftMax, rightMax);
     _maxLimit = max(leftMax, rightMax);
 
@@ -21,19 +21,19 @@ SteeringServo::SteeringServo(int pin, int center, int leftMax, int rightMax)
 
 void SteeringServo::begin()
 {
-    // 1. Configurar Periodo (Frecuencia)
-    // Servos analógicos estándar (SG90, MG996R) funcionan a 50Hz (20ms).
-    // @warning Usar frecuencias mayores (>60Hz) puede sobrecalentar o quemar servos analógicos.
+    // 1. Configure Period (Frequency)
+    // Standard analog servos (SG90, MG996R) operate at 50Hz (20ms).
+    // @warning Using higher frequencies (>60Hz) can overheat or burn analog servos.
     _servo.setPeriodHertz(50);
 
-    // 2. Configurar Anchos de Pulso (Pulse Width)
-    // Definimos la correspondencia entre señal eléctrica (microsegundos) y giro físico.
-    // - Estándar Teórico RC: 1000us (0°) a 2000us (180°).
-    // - Rango Extendido (Hardware Real): 500us (0°) a 2400us (180°).
-    // Usamos este rango amplio para asegurar que servos económicos alcancen su recorrido completo.
+    // 2. Configure Pulse Widths
+    // Define the mapping between electrical signal (microseconds) and physical rotation.
+    // - RC Theoretical Standard: 1000us (0°) to 2000us (180°).
+    // - Extended Range (Real Hardware): 500us (0°) to 2400us (180°).
+    // We use this wide range to ensure budget servos reach their full travel.
     _servo.attach(_pin, 500, 2400);
 
-    // 3. Posición Inicial
+    // 3. Initial Position
     center();
 }
 
@@ -54,12 +54,11 @@ void SteeringServo::turnRight()
 
 void SteeringServo::write(int angle)
 {
-    // --- CAPA DE SEGURIDAD (HARDWARE PROTECTION) ---
-    // Función constrain(val, min, max):
-    // Si val < min -> devuelve min.
-    // Si val > max -> devuelve max.
-    // Esto impide físicamente que el servo reciba una orden que rompa la dirección.
-    // Si fuera al revés, la lógica de constrain cambia.
+    // --- SAFETY LAYER (HARDWARE PROTECTION) ---
+    // Function constrain(val, min, max):
+    // If val < min -> returns min.
+    // If val > max -> returns max.
+    // This physically prevents the servo from receiving a command that breaks the steering.
     int safeAngle = constrain(angle, _minLimit, _maxLimit);
 
     _servo.write(safeAngle);

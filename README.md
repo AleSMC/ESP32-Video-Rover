@@ -1,149 +1,142 @@
 # 🚜 ESP32-Video-Rover
 
-> **Vehículo RC WiFi híbrido con transmisión de video MJPEG y control UDP.**
+> **Hybrid WiFi RC vehicle with MJPEG video transmission and UDP control.**
 
-Este proyecto implementa un rover controlado remotamente utilizando un **ESP32-CAM** (AI Thinker). El sistema opera bajo una topología de **Eje Sólido Electrónico** (Tracción trasera unificada) para garantizar estabilidad de arranque y eficiencia de recursos, con dirección Ackermann mediante servomotor.
+This project implements a remote-controlled rover using an **ESP32-CAM** (AI Thinker). The system operates under a **"Solid Axle"** topology (Unified Rear Traction) to ensure startup stability and resource efficiency, featuring Ackermann steering via a servo motor.
 
-## 📂 Estructura del Proyecto
+## 📂 Project Structure
 
     ESP32-Video-Rover/
-    ├── firmware/               # Código fuente C++ (PlatformIO)
-    │   ├── src/                # Lógica principal (.cpp)
-    │   ├── include/            # Cabeceras (.h) y Configuración
-    │   ├── lib/                # Librerías Modulares
-    │   │   ├── SolidAxle/      # Driver de tracción (Topología Eje Sólido)
-    │   │   ├── SteeringServo/  # Driver de dirección (Servo Ackermann)
-    │   │   ├── NetworkManager/ # Gestor de conectividad (WiFi STA/AP + mDNS)
-    │   │   ├── CameraServer/   # Driver de video (OV2640 + Servidor Web MJPEG)
-    │   │   └── RemoteControl/  # Protocolo UDP y Lógica de Failsafe
-    │   ├── examples/           # Tests unitarios preservados (Motores, Servo, LED)
-    │   └── platformio.ini      # Configuración del entorno de compilación
-    ├── software/               # Cliente PC (Python + OpenCV + UDP)
-    │   ├── modules/            # Módulos de lógica desacoplada
-    │   │   ├── __init__.py     # Inicializador de paquete Python
-    │   │   ├── KeyboardPilot.py # Driver de Teclado (pynput + Prioridades)
-    │   │   └── VideoStream.py   # Decodificador de Video Asíncrono (Threading)
-    │   ├── main.py             # Ejecutable Principal (Bucle de Control)
-    │   └── requirements.txt    # Dependencias (opencv, pynput, numpy)
-    ├── docs/                   # Documentación técnica, diagramas y notas
-    └── README.md               # Este archivo
+    ├── firmware/               # C++ Source Code (PlatformIO)
+    │   ├── src/                # Main Logic (.cpp)
+    │   ├── include/            # Headers (.h) and Configuration
+    │   ├── lib/                # Modular Libraries
+    │   │   ├── SolidAxle/      # Traction Driver (Solid Axle Topology)
+    │   │   ├── SteeringServo/  # Steering Driver (Ackermann Servo)
+    │   │   ├── NetworkManager/ # Connectivity Manager (WiFi STA/AP + mDNS)
+    │   │   ├── CameraServer/   # Video Driver (OV2640 + MJPEG Web Server)
+    │   │   └── RemoteControl/  # UDP Protocol & Failsafe Logic
+    │   ├── examples/           # Preserved Unit Tests (Motors, Servo, LED)
+    │   └── platformio.ini      # Build Environment Configuration
+    ├── software/               # PC Client (Python + OpenCV + UDP)
+    │   ├── modules/            # Decoupled Logic Modules
+    │   │   ├── __init__.py     # Python Package Initializer
+    │   │   ├── KeyboardPilot.py # Keyboard Driver (pynput + Priorities)
+    │   │   └── VideoStream.py   # Asynchronous Video Decoder (Threading)
+    │   ├── main.py             # Main Executable (Control Loop)
+    │   └── requirements.txt    # Dependencies (opencv, pynput, numpy)
+    ├── docs/                   # Technical Documentation, Diagrams, and Notes
+    └── README.md               # This file
 
-## 🛠 Hardware y Conexiones
+## 🛠 Hardware & Connections
 
-**Plataforma:** ESP32-CAM (Modelo AI Thinker) con antena externa modificada.
-**Topología de Tracción:** Paralelo (Solid Axle). Ambos motores traseros reciben la misma señal PWM y Dirección.
+**Platform:** ESP32-CAM (AI Thinker Model) with modified external antenna.
+**Traction Topology:** Parallel (Solid Axle). Both rear motors receive the same PWM signal.
 
-> ℹ️ **Detalles Completos:** Ver guía de montaje, netlist y advertencias en [docs/hardware_setup.md](docs/hardware_setup.md).
+> ℹ️ **Full Details:** See the setup guide, netlist, and warnings in [docs/hardware_setup.md](docs/hardware_setup.md).
 
-| Señal Lógica        | Pin ESP32 | Conexión L298N | Notas Técnicas                           |
-| :------------------ | :-------- | :------------- | :--------------------------------------- |
-| **PWM (Velocidad)** | GPIO 13   | ENA + ENB      | Puenteado. Control de Potencia (0-100%). |
-| **Dirección Fwd**   | GPIO 14   | IN1 + IN3      | Puenteado. Marcha Adelante.              |
-| **Dirección Rev**   | GPIO 15   | IN2 + IN4      | Puenteado. Marcha Atrás.                 |
-| **Servo Dirección** | GPIO 2    | PWM Signal     | Comparte línea con LED Flash.            |
-| **Reservado (I+D)** | GPIO 12   | **NC**         | _No Conectado_ para evitar Boot Fail.    |
+| Logic Signal       | ESP32 Pin | L298N Connection | Technical Notes                     |
+| :----------------- | :-------- | :--------------- | :---------------------------------- |
+| **PWM (Speed)**    | GPIO 13   | ENA + ENB        | Bridged. Power Control (0-100%).    |
+| **Dir Fwd**        | GPIO 14   | IN1 + IN3        | Bridged. Forward Gear.              |
+| **Dir Rev**        | GPIO 15   | IN2 + IN4        | Bridged. Reverse Gear.              |
+| **Steering Servo** | GPIO 2    | PWM Signal       | Shares line with Flash LED.         |
+| **Reserved (R&D)** | GPIO 12   | **NC**           | _Not Connected_ to avoid Boot Fail. |
 
-> **Nota:** Se ha desactivado el _Brownout Detector_ por software para evitar reinicios debido a picos de consumo de los motores.
+> **Note:** The _Brownout Detector_ has been disabled in software to prevent resets caused by motor current spikes.
 
-## 🚀 Inicio Rápido (Firmware)
+## 🚀 Quick Start (Firmware)
 
-### Prerrequisitos
+### Prerequisites
 
-- VSCode con extensión **PlatformIO**.
-- Driver CH340 (si usas la base MB) o FTDI.
+- VSCode with **PlatformIO** extension.
+- CH340 Driver (if using MB base) or FTDI adapter.
 
-### Instalación
+### Installation
 
-1. Clonar el repositorio.
-2. Abrir la carpeta raíz en VSCode.
-3. Crear el archivo de credenciales:
-   Copiar `firmware/include/secrets_example.h` a `firmware/include/secrets.h` y rellenar con tu WiFi.
+1. Clone the repository.
+2. Open the root folder in VSCode.
+3. Create the credentials file:
+   Copy `firmware/include/secrets_example.h` to `firmware/include/secrets.h` and fill in your WiFi details.
 
-### Compilación y Carga
+### Build & Upload
 
-    # Desde la terminal de PlatformIO
+    # From PlatformIO Terminal
     cd firmware
     pio run -t upload
 
-_Si falla la subida:_ Mantén pulsado el botón `IO0` (o conecta GPIO0 a GND) y reinicia antes de subir.
+_If upload fails:_ Hold the `IO0` button (or connect GPIO0 to GND) and press Reset before uploading.
 
-### Monitorización
+### Monitoring
 
-Para ver logs de depuración (IP asignada, estado de motores):
+To see debug logs (Assigned IP, Motor State):
 
     pio device monitor -b 115200
 
-## 📡 Arquitectura de Red
+## 📡 Network Architecture
 
-- **Modo Híbrido:** Intenta conectar a STA (WiFi Hogar). Si falla tras 10s, despliega AP `Rover-Emergency`.
-- **Descubrimiento:** mDNS habilitado en `rover.local`.
-- **Protocolos:**
-  - **Video:** Servidor HTTP (Stream MJPEG).
-  - **Control:** UDP (Puerto por defecto: `UDP_PORT` en config).
-- **Seguridad (Failsafe):** Watchdog de 500ms. Si no se reciben paquetes UDP, los motores se detienen.
+- **Hybrid Mode:** Tries to connect to STA (Home WiFi). If it fails after 10s, it deploys the AP "Rover-Emergency".
+- **Discovery:** mDNS enabled at `rover.local`.
+- **Protocols:**
+  - **Video:** HTTP Server (MJPEG Stream).
+  - **Control:** UDP (Default Port: `UDP_PORT` in config).
+- **Safety (Failsafe):** 1000ms Watchdog. If no UDP packets are received, motors stop.
 
-> **⚠️ NOTA DE SEGURIDAD (REVERSA):**
-> La lógica de reversa está **deshabilitada en el firmware base** (Fase A) para prevenir picos de corriente (Back-EMF). La implementación de reversa segura (con Dynamic Dead Time) se gestionará desde el Cliente Python en fases avanzadas.
+> **⚠️ SAFETY NOTE (REVERSE):**
+> Reverse logic is **disabled in base firmware** (Phase A) to prevent Back-EMF current spikes. Safe reverse implementation (with Dynamic Dead Time) is handled via the Python Client in advanced stages.
 
-## ✅ Roadmap de Desarrollo
+## ✅ Development Roadmap
 
-- [x] **Paso 0:** Configuración de Entorno y GitOps.
-- [x] **Paso A:** Implementación de Driver de Motores (Topología Eje Sólido con PWM). _Implementado FWD/Brake/Coast._
-- [x] **Paso B:** Control de Servo de Dirección.
-- [x] **Paso C.1:** Conectividad de Red (WiFi Híbrido + mDNS).
-  - _El Rover se conecta automáticamente al WiFi configurado o crea su propio Punto de Acceso._
-- [x] **Paso C.2:** Transmisión de Video (Cámara OV2640).
-  - _Servidor Web asíncrono con streaming MJPEG de baja latencia._
-- [x] **Paso D:** Protocolo de Control UDP.
-  - **Arquitectura:** Comunicación unidireccional (Fire-and-Forget) para baja latencia.
-  - **Puerto:** `9999` (Configurable en `config.h`).
-  - **Frecuencia de Actualización:** ~20Hz (50ms) recomendado desde el cliente.
-  - **Estructura del Paquete (Binario - 2 Bytes):**
-    - `Byte[0]` **Tracción:**
-      - `0`: Coast (Inercia / Soltar acelerador).
-      - `1`: Brake (Frenado Activo).
-      - `2 - 255`: Valor PWM directo para avance (Forward).
-    - `Byte[1]` **Dirección:**
-      - `0 - 180`: Ángulo del servo (Grados reales).
-      - El firmware aplica `constrain()` interno para respetar los límites físicos (`STEERING_LEFT_MAX`, `STEERING_RIGHT_MAX`).
-  - **Seguridad (Failsafe):**
-    - Si el Rover no recibe paquetes válidos en **1000ms**, se activa el **Frenado de Emergencia** (`checkFailsafe`) y se centran las ruedas automáticamente.
-- [x] **Paso E:** Cliente Python (PC).
-  - **Input:** Migración a `pynput` (Hardware Input) para soporte de diagonales (W+A) y combos (Shift/Space).
-  - **Video:** Decodificación asíncrona en hilo dedicado (`threading`) para eliminar lag de renderizado.
-  - **Red:** Rate Limiting (5Hz) para evitar saturación del buffer RX del ESP32.
-- [ ] **Paso EXTRA (Bonus):** Control de Reversa Dinámica.
-  - Implementar lógica de seguridad en Python para calcular el tiempo de frenado necesario según la velocidad previa antes de enviar el comando de reversa.
-- [ ] **Fase I+D (Bonus):** Investigación de Diferencial Electrónico. Evaluar viabilidad de uso seguro del GPIO 12 (Strapping Pin) para control independiente de motores.
+- [x] **Step 0:** Environment Setup & GitOps.
+- [x] **Step A:** Motor Driver Implementation (Solid Axle with PWM). _Implemented FWD/Brake/Coast._
+- [x] **Step B:** Steering Servo Control.
+- [x] **Step C.1:** Network Stack (Hybrid WiFi + mDNS).
+  - _Rover connects automatically or creates its own AP._
+- [x] **Step C.2:** Video Streaming (OV2640).
+  - _Asynchronous Web Server with Low Latency MJPEG streaming._
+- [x] **Step D:** UDP Control Protocol.
+  - **Architecture:** Fire-and-Forget unidirectional communication for low latency.
+  - **Port:** `9999` (Configurable).
+  - **Packet Structure (Binary - 2 Bytes):**
+    - `Byte[0]` **Traction:** `0` (Coast), `1` (Brake), `2-255` (PWM Forward).
+    - `Byte[1]` **Steering:** `0-180` (Servo Angle).
+  - **Safety (Failsafe):** **1000ms** Timeout -> Emergency Brake.
+- [x] **Step E:** Python Client (PC) v1.0.
+  - **Input:** Migration to `pynput` (Hardware Input) supporting diagonals (W+A) and combos (Shift/Space).
+  - **Video:** Asynchronous decoding in dedicated thread to eliminate rendering lag.
+  - **Network:** Rate Limiting **(5Hz)** to prevent RX buffer saturation on ESP32.
+- [ ] **Extra Step (Bonus):** Dynamic Reverse Control.
+  - Implement safety logic in Python to calculate required braking time based on previous speed before sending reverse commands.
+- [ ] **R&D Phase (Bonus):** Electronic Differential Research. Evaluate viability of safely using GPIO 12 (Strapping Pin).
 
-## 💻 Arquitectura de Software (Cliente PC)
+## 💻 Software Architecture (PC Client)
 
-El cliente Python (`software/main.py`) ha sido diseñado siguiendo patrones de **Sistemas de Tiempo Real** para desacoplar la visión del control.
+The Python client (`software/main.py`) is designed following **Real-Time System** patterns to decouple vision from control.
 
-### 1. Pipeline de Video Asíncrono (`VideoStream.py`)
+### 1. Asynchronous Video Pipeline (`VideoStream.py`)
 
-A diferencia de los ejemplos básicos de OpenCV que bloquean el bucle principal, este sistema utiliza `threading`:
+Unlike basic OpenCV examples that block the main loop, this system uses `threading`:
 
-- **Hilo Secundario:** Descarga frames MJPEG constantemente y mantiene solo el último en memoria (`buffer_size=1`). Si el procesamiento es lento, descarta frames viejos (Drop Frame) para garantizar que siempre vemos el "presente".
-- **Hilo Principal:** Solo se encarga de pintar la imagen ya decodificada, garantizando 0ms de bloqueo en el control.
+- **Background Thread:** Constantly downloads MJPEG frames and keeps only the latest one in memory (`buffer_size=1`). If processing is slow, it drops old frames to ensure we always see the "present".
+- **Main Thread:** Only handles painting the already decoded image, ensuring 0ms blocking on control.
 
-### 2. Pilotaje por Interrupción de Hardware (`KeyboardPilot.py`)
+### 2. Hardware Interrupt Piloting (`KeyboardPilot.py`)
 
-Uso de la librería **`pynput`**:
+Uses the **`pynput`** library:
 
-- **Ventaja:** Lee el estado físico de las teclas (Press/Release events).
-- **Capacidad:** Permite combinaciones complejas como **Drift (W+A+Space)**, diagonales perfectas y control de velocidad variable (Shift para precisión) sin "ghosting".
-- **Lógica de Prioridad:**
-  1. `S` (Freno) > `W` (Acelerador).
-  2. `Shift` (Precisión) > `Space` (Turbo) > Normal.
+- **Advantage:** Reads physical key states (Press/Release events).
+- **Capability:** Allows complex combinations like **Drift (W+A+Space)**, perfect diagonals, and variable speed control (Shift for precision) without "ghosting".
+- **Priority Logic:**
+  1. `S` (Brake) > `W` (Throttle).
+  2. `Shift` (Precision) > `Space` (Turbo) > Normal.
 
-### 3. Gestión de Tráfico UDP (Rate Limiting)
+### 3. UDP Traffic Management (Rate Limiting)
 
-El ESP32 tiene una sola antena (Half-Duplex). Para evitar colisiones entre la subida de Video y la bajada de Comandos:
+The ESP32 has a single antenna (Half-Duplex). To prevent collisions between Video Upload and Command Download:
 
-- El cliente limita el envío de paquetes UDP a **200ms (5Hz)**.
-- Esto libera el espectro aéreo el 90% del tiempo, permitiendo que el video fluya sin interrupciones.
+- The client limits UDP packet transmission to **200ms (5Hz)**.
+- This frees up the air spectrum 90% of the time, allowing video to flow without interruptions.
 
 ---
 
-**Licencia:** MIT License. Ver archivo `LICENSE` para el texto completo.
+**License:** MIT License. See `LICENSE` file for full text.

@@ -1,44 +1,44 @@
 /**
  * @file secrets_example.h
- * @brief Plantilla de credenciales de red (Placeholder).
- * @details INSTRUCCIONES DE USO PARA DESARROLLADORES:
- * 1. Duplica este archivo y renómbralo a 'secrets.h'.
- * 2. Rellena 'secrets.h' con tus credenciales reales.
- * 3. El archivo 'secrets.h' será ignorado por Git para seguridad.
+ * @brief Network Credentials Template (Placeholder).
+ * @details USAGE INSTRUCTIONS FOR DEVELOPERS:
+ * 1. Duplicate this file and rename it to 'secrets.h'.
+ * 2. Fill 'secrets.h' with your real credentials.
+ * 3. The 'secrets.h' file will be ignored by Git for security.
  * @author Alejandro Moyano (@AleSMC)
  */
 
 #pragma once
 
 // =============================================================================
-// 1. MODO ESTACIÓN (STA) - CONEXIÓN PRINCIPAL
+// 1. STATION MODE (STA) - MAIN CONNECTION
 // =============================================================================
 
-/** @brief Nombre de la red WiFi (SSID) a la que conectarse. */
-#define WIFI_SSID "PON_TU_SSID_AQUI"
+/** @brief WiFi Network Name (SSID) to connect to. */
+#define WIFI_SSID "YOUR_SSID_HERE"
 
-/** @brief Contraseña de la red WiFi. */
-#define WIFI_PASSWORD "PON_TU_CONTRASEÑA_AQUI"
+/** @brief WiFi Password. */
+#define WIFI_PASSWORD "YOUR_PASSWORD_HERE"
 
 // =============================================================================
-// 2. MODO PUNTO DE ACCESO (AP) - RESPALDO DE EMERGENCIA
+// 2. ACCESS POINT MODE (AP) - EMERGENCY BACKUP
 // =============================================================================
 
-/** @brief SSID del Hotspot del Rover. */
+/** @brief Rover Hotspot SSID. */
 #define AP_SSID "Rover-Emergency"
 
-/** @brief Contraseña WPA2 para acceder al Rover. */
+/** @brief WPA2 Password to access the Rover. */
 #define AP_PASSWORD "rover1234"
 
-/** @brief Canal WiFi de emisión (1-13). */
+/** @brief WiFi Broadcast Channel (1-13). */
 #define AP_CHANNEL 1
 
-/** @brief Límite de conexiones simultáneas (Ahorro RAM). */
+/** @brief Simultaneous connection limit (RAM saving). */
 #define AP_MAX_CONN 2
 
 // =============================================================================
-// 3. IDENTIDAD DE RED (mDNS)
+// 3. NETWORK IDENTITY (mDNS)
 // =============================================================================
 
-/** @brief Hostname base (ej: rover -> rover.local). */
+/** @brief Base Hostname (e.g., rover -> rover.local). */
 #define DEVICE_HOSTNAME "rover"

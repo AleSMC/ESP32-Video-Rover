@@ -1,18 +1,18 @@
 /**
  * @file CameraServer.cpp
- * @brief Implementación del Streaming de Video MJPEG de baja latencia.
+ * @brief Implementation of Low Latency MJPEG Video Streaming.
  * @author Alejandro Moyano (@AleSMC)
  * @details
- * Utiliza el protocolo 'multipart/x-mixed-replace' para enviar una secuencia infinita
- * de imágenes JPEG sobre una única conexión HTTP persistente.
+ * Uses the 'multipart/x-mixed-replace' protocol to send an infinite sequence
+ * of JPEG images over a single persistent HTTP connection.
  */
 
 #include "CameraServer.h"
 
 // =============================================================================
-// DEFINICIÓN DE PINES (MODELO AI THINKER ESP32-CAM)
+// PIN DEFINITIONS (AI THINKER ESP32-CAM MODEL)
 // =============================================================================
-// Mapeo físico estricto para la placa ESP32-CAM estándar.
+// Strict physical mapping for standard ESP32-CAM board.
 #define PWDN_GPIO_NUM 32
 #define RESET_GPIO_NUM -1
 #define XCLK_GPIO_NUM 0
@@ -32,12 +32,12 @@
 #define PCLK_GPIO_NUM 22
 
 // =============================================================================
-// CONSTANTES DEL PROTOCOLO MJPEG
+// MJPEG PROTOCOL CONSTANTS
 // =============================================================================
-// El "Boundary" es una cadena de texto arbitraria que sirve de separador entre fotos.
+// The "Boundary" is an arbitrary string that serves as a separator between photos.
 #define PART_BOUNDARY "123456789000000000000987654321"
 
-// Cabeceras HTTP precalculadas para eficiencia
+// Precalculated HTTP headers for efficiency
 static const char *_STREAM_CONTENT_TYPE = "multipart/x-mixed-replace;boundary=" PART_BOUNDARY;
 static const char *_STREAM_BOUNDARY = "\r\n--" PART_BOUNDARY "\r\n";
 static const char *_STREAM_PART = "Content-Type: image/jpeg\r\nContent-Length: %u\r\n\r\n";
@@ -49,7 +49,7 @@ CameraServer::CameraServer()
 
 bool CameraServer::init()
 {
-    // 1. Configuración Hardware del Sensor OV2640
+    // 1. OV2640 Sensor Hardware Configuration
     camera_config_t config;
     config.ledc_channel = LEDC_CHANNEL_0;
     config.ledc_timer = LEDC_TIMER_0;
@@ -70,44 +70,45 @@ bool CameraServer::init()
     config.pin_pwdn = PWDN_GPIO_NUM;
     config.pin_reset = RESET_GPIO_NUM;
 
-    // BAJAR LA VELOCIDAD DEL RELOJ (CRÍTICO)
-    // Por defecto está en 20000000 (20MHz).
-    // Al bajarlo a 10MHz, la cámara procesa más lento físicamente.
-    // Esto limita los FPS a unos 10-15 estables, liberando la CPU y el WiFi.
+    // LOWER CLOCK SPEED (CRITICAL)
+    // Default is 20000000 (20MHz).
+    // Lowering it to 15MHz forces the camera to process slower physically.
+    // This limits FPS to stable 10-15, freeing up CPU and WiFi bandwidth.
     config.xclk_freq_hz = 15000000;       // 15MHz
-    config.pixel_format = PIXFORMAT_JPEG; // El hardware comprime a JPEG nativamente
+    config.pixel_format = PIXFORMAT_JPEG; // Hardware compresses to JPEG natively
 
-    // --- 2. OPTIMIZACIÓN PARA STREAMING FLUIDO (RC) ---
-    // Usamos QVGA (320x240) para garantizar >25 FPS y baja latencia (<100ms),
-    // ofrece el mejor equilibrio calidad/velocidad para FPV.
-    // Resoluciones mayores (SVGA/HD) introducen lag inaceptable para conducción.
+    // --- 2. OPTIMIZATION FOR SMOOTH STREAMING (RC) ---
+    // We use QVGA (320x240) to guarantee >25 FPS and low latency (<100ms),
+    // offering the best balance of quality/speed for FPV.
+    // Higher resolutions (SVGA/HD) introduce unacceptable lag for driving.
     config.frame_size = FRAMESIZE_QVGA;
-    config.jpeg_quality = 60; // Rango 0-63 (10-15 es ideal para streaming fluido)
+    config.jpeg_quality = 60; // Range 0-63 (60 is very low quality -> high compression -> fast)
 
-    // 3. Verificación de Memoria Externa (PSRAM)
-    // El video requiere mucha RAM. Si no hay PSRAM, bajamos la calidad para no crashear.
-    // Chip ESP32 tiene poca RAM interna. La PSRAM (4MB) es vital para video.
+    // 3. External Memory Verification (PSRAM)
+    // Video requires a lot of RAM. If no PSRAM, lower quality to prevent crashes.
+    // ESP32 chip has little internal RAM. PSRAM (4MB) is vital for video.
     if (psramFound())
     {
-        // Serial.println("[CAM] PSRAM detectada. Modo Alto Rendimiento activado.");
-        // config.grab_mode = CAMERA_GRAB_LATEST; // Siempre el frame más reciente
-        // config.fb_count = 2;                   // Doble Buffer: Clave para mantener FPS altos
+        // Serial.println("[CAM] PSRAM detected. High Performance Mode activated.");
+        // config.grab_mode = CAMERA_GRAB_LATEST; // Always the most recent frame
+        // config.fb_count = 2;                   // Double Buffer: Key to maintain high FPS
 
-        config.fb_count = 1;                       // S 1 frame
-        config.grab_mode = CAMERA_GRAB_WHEN_EMPTY; // No descartamos frames.
+        // SINGLE BUFFER MODE (ZERO LATENCY)
+        config.fb_count = 1;                       // Only 1 frame buffer
+        config.grab_mode = CAMERA_GRAB_WHEN_EMPTY; // Wait until buffer is free
     }
     else
     {
-        Serial.println("[CAM] WARNING: No PSRAM. Reduciendo buffers.");
-        config.fb_count = 1;                       // Sin PSRAM solo cabe 1 frame
-        config.grab_mode = CAMERA_GRAB_WHEN_EMPTY; // No tenemos memoria para descartar frames.
+        Serial.println("[CAM] WARNING: No PSRAM. Reducing buffers.");
+        config.fb_count = 1;                       // Without PSRAM only 1 frame fits
+        config.grab_mode = CAMERA_GRAB_WHEN_EMPTY; // No memory to discard frames.
     }
 
-    // 4. Iniciar Driver
+    // 4. Initialize Driver
     esp_err_t err = esp_camera_init(&config);
     if (err != ESP_OK)
     {
-        Serial.printf("[ERROR] Fallo init cámara: 0x%x\n", err);
+        Serial.printf("[ERROR] Camera Init Failed: 0x%x\n", err);
         return false;
     }
 
@@ -122,53 +123,53 @@ esp_err_t CameraServer::streamHandler(httpd_req_t *req)
     uint8_t *_jpg_buf = NULL;
     char *part_buf[64];
 
-    // Cabecera inicial del stream
+    // Initial stream header
     res = httpd_resp_set_type(req, _STREAM_CONTENT_TYPE);
     if (res != ESP_OK)
         return res;
 
-    // Bucle de transmisión infinita
+    // Infinite transmission loop
     while (true)
     {
-        // A. Capturar Frame (Bloqueante)
+        // A. Capture Frame (Blocking)
         fb = esp_camera_fb_get();
         if (!fb)
         {
-            Serial.println("[ERROR] Frame corrupto o cámara desconectada");
+            Serial.println("[ERROR] Corrupt frame or camera disconnected");
             res = ESP_FAIL;
         }
         else
         {
-            // B. Enviar Boundary y Headers del Frame
+            // B. Send Boundary and Frame Headers
             if (res == ESP_OK)
             {
                 res = httpd_resp_send_chunk(req, _STREAM_BOUNDARY, strlen(_STREAM_BOUNDARY));
             }
-            // C. Enviar Cabecera de la Imagen actual (Content-Type y Length)
+            // C. Send Current Image Header (Content-Type and Length)
             if (res == ESP_OK)
             {
                 size_t hlen = snprintf((char *)part_buf, 64, _STREAM_PART, fb->len);
                 res = httpd_resp_send_chunk(req, (const char *)part_buf, hlen);
             }
-            // D. Enviar Payload (Imagen JPEG)
+            // D. Send Payload (JPEG Image)
             if (res == ESP_OK)
             {
                 res = httpd_resp_send_chunk(req, (const char *)fb->buf, fb->len);
             }
 
-            // E. Liberar buffer para la siguiente captura
+            // E. Free buffer for next capture
             esp_camera_fb_return(fb);
             fb = NULL;
         }
 
-        // Si el cliente cierra la conexión, salimos del bucle
+        // If client closes connection, break loop
         if (res != ESP_OK)
             break;
 
-        // --- ESTABILIDAD (THROTTLING) ---
-        // Hacemos una pausa de 20ms para dejar que el WiFi respire.
-        // Esto permite que los paquetes UDP entren sin chocar con el video.
-        // Matemáticamente: Envío + 20ms pausa = aprox 15-20 FPS estables.
+        // --- STABILITY (THROTTLING) ---
+        // Pause for 20ms to let WiFi breathe.
+        // This allows UDP packets to enter without colliding with video.
+        // Mathematically: Transmission + 20ms pause = approx 15-20 stable FPS.
         delay(20);
     }
     return res;
@@ -177,25 +178,25 @@ esp_err_t CameraServer::streamHandler(httpd_req_t *req)
 void CameraServer::startServer()
 {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
-    config.server_port = HTTP_PORT; // Puerto 80 (definido en config.h)
+    config.server_port = HTTP_PORT; // Port 80 (defined in config.h)
 
-    // Definición de la ruta URI
+    // URI Route Definition
     httpd_uri_t stream_uri = {
         .uri = "/stream", // URL: http://ip/stream
         .method = HTTP_GET,
-        .handler = streamHandler, // Función estática que gestiona el bucle
+        .handler = streamHandler, // Static function managing the loop
         .user_ctx = NULL};
 
-    Serial.printf("[CAM] Servidor HTTP escuchando en puerto %d\n", config.server_port);
+    Serial.printf("[CAM] HTTP Server listening on port %d\n", config.server_port);
 
-    // Iniciar servidor httpd ligero de Espressif
+    // Start Espressif lightweight httpd server
     if (httpd_start(&_httpServer, &config) == ESP_OK)
     {
         httpd_register_uri_handler(_httpServer, &stream_uri);
-        Serial.println("[CAM] Endpoint registrado: /stream");
+        Serial.println("[CAM] Endpoint registered: /stream");
     }
     else
     {
-        Serial.println("[ERROR] Fallo al iniciar servidor HTTP");
+        Serial.println("[ERROR] Failed to start HTTP Server");
     }
 }

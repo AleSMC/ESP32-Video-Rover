@@ -1,6 +1,6 @@
 /**
  * @file SolidAxle.cpp
- * @brief Implementación del driver de motores L298N para ESP32.
+ * @brief L298N Motor Driver Implementation for ESP32.
  * @author Alejandro Moyano (@AleSMC)
  */
 
@@ -16,23 +16,23 @@ SolidAxle::SolidAxle(int pinFwd, int pinRev, int pinPWM)
 
 void SolidAxle::begin()
 {
-    // 1. Configuración de Pines (Salida Digital)
+    // 1. Pin Configuration (Digital Output)
     pinMode(_pinFwd, OUTPUT);
     pinMode(_pinRev, OUTPUT);
     pinMode(_pinPWM, OUTPUT);
 
-    // 2. Configuración del Periférico PWM (LEDC)
-    // El ESP32 no usa analogWrite(), usa el controlador LEDC hardware.
+    // 2. PWM Peripheral Configuration (LEDC)
+    // ESP32 uses LEDC hardware controller, not analogWrite().
     ledcSetup(_pwmChannel, _pwmFreq, _pwmResolution);
     ledcAttachPin(_pinPWM, _pwmChannel);
 
-    // 3. Estado Inicial Seguro
+    // 3. Safe Initial State
     brake();
 }
 
 void SolidAxle::brake()
 {
-    // Lógica L298N: IN1=LOW, IN2=LOW, ENA=HIGH -> Freno Corto (Short Brake)
+    // L298N Logic: IN1=LOW, IN2=LOW, ENA=HIGH -> Short Brake
     digitalWrite(_pinFwd, LOW);
     digitalWrite(_pinRev, LOW);
     ledcWrite(_pwmChannel, 255);
@@ -41,7 +41,7 @@ void SolidAxle::brake()
 
 void SolidAxle::coast()
 {
-    // Lógica L298N: ENA=LOW -> Motor Deshabilitado (Free Run)
+    // L298N Logic: ENA=LOW -> Motor Disabled (Free Run)
     digitalWrite(_pinFwd, LOW);
     digitalWrite(_pinRev, LOW);
     ledcWrite(_pwmChannel, 0);
@@ -50,49 +50,48 @@ void SolidAxle::coast()
 
 void SolidAxle::drive(int velocidad)
 {
-    // --- 1. VALIDACIÓN DE INTEGRIDAD ---
+    // --- 1. INTEGRITY VALIDATION ---
     if (velocidad > 255 || velocidad < -255)
     {
-        Serial.printf("[ERROR] Motor: Velocidad %d fuera de rango. Ignorado.\n", velocidad);
+        Serial.printf("[ERROR] Motor: Speed %d out of range. Ignored.\n", velocidad);
         return;
     }
 
-    // --- 2. PROTECCIÓN DE HARDWARE (BLOQUEO DE REVERSA) ---
-    // @warning La inversión brusca de marcha genera corrientes de retorno (Back-EMF)
-    // que pueden quemar el driver L298N o reiniciar el ESP32.
-    // En esta fase, bloqueamos la reversa hasta implementar "Dynamic Dead Time" en el cliente.
+    // --- 2. HARDWARE PROTECTION (REVERSE LOCK) ---
+    // @warning Sudden reverse generates Back-EMF currents that can burn
+    // the L298N or reset the ESP32.
+    // In this phase, reverse is blocked until "Dynamic Dead Time" is implemented in client.
     if (velocidad < 0)
     {
-        // Comentar if() solo bajo tu propia responsabilidad y con lógica de parada previa.
-        Serial.printf("[WARN] Reversa solicitada. Bloqueada por seguridad.\n");
+        Serial.printf("[WARN] Reverse requested. Blocked for safety.\n");
         brake();
         return;
     }
 
-    // --- 3. ZONA MUERTA (Deadzone) ---
-    // Los motores DC baratos no tienen torque suficiente para moverse con PWM muy bajo.
-    // Cortamos la señal para evitar zumbidos eléctricos sin movimiento.
+    // --- 3. DEADZONE ---
+    // Cheap DC motors lack torque to move at very low PWM.
+    // Cut signal to avoid electric humming without movement.
     if (abs(velocidad) < 15)
     {
         coast();
         return;
     }
 
-    // --- 4. APLICACIÓN DE POTENCIA ---
+    // --- 4. POWER APPLICATION ---
     if (velocidad > 0)
     {
-        // Configuración Avance: IN1=HIGH, IN2=LOW
+        // Forward Config: IN1=HIGH, IN2=LOW
         digitalWrite(_pinFwd, HIGH);
         digitalWrite(_pinRev, LOW);
     }
     else if (velocidad < 0)
     {
-        // Configuración Retroceso: IN1=LOW, IN2=HIGH
+        // Reverse Config: IN1=LOW, IN2=HIGH
         digitalWrite(_pinFwd, LOW);
         digitalWrite(_pinRev, HIGH);
     }
 
-    // El PWM siempre es positivo (magnitud del vector velocidad)
+    // PWM is always positive (velocity vector magnitude)
     ledcWrite(_pwmChannel, abs(velocidad));
     _velocidadActual = velocidad;
 }

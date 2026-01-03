@@ -1,34 +1,42 @@
 /**
  * @file test_servo_calibration.cpp
- * @brief Test de Calibración de Dirección (Paso B).
+ * @brief Steering Calibration Test (Step B).
  * @author Alejandro Moyano (@AleSMC)
- * * @details
- * Script de validación para el servo de dirección (Ackermann).
- * Mueve el mecanismo cíclicamente: Centro -> Izquierda -> Centro -> Derecha.
- * * @note
- * Objetivo: Ajustar visualmente los límites STEERING_LEFT_MAX y STEERING_RIGHT_MAX
- * en 'config.h' para obtener el máximo giro sin forzar el mecanismo.
- * * =================================================================================
- * @section execution Procedimiento de Despliegue (CLI)
+ *
+ * @details
+ * Validation script for the steering servo (Ackermann).
+ * Cycles the mechanism: Center -> Left -> Center -> Right.
+ *
+ * @note
+ * Goal: Visually adjust STEERING_LEFT_MAX and STEERING_RIGHT_MAX limits
+ * in 'config.h' to obtain maximum travel without forcing the mechanism.
+ *
  * =================================================================================
- * * 1. PREPARACIÓN DE HARDWARE:
- * - Desconectar el cable USB.
- * - Asegurar alimentación de batería (El servo no funciona solo con USB).
- * - IMPORTANTE: El GPIO 2 comparte línea con el LED Flash. Es normal que parpadee.
- * - Volver a conectar el cable USB para la carga.
- * * 2. PREPARACIÓN DE SOFTWARE:
- * - Este código debe estar en 'firmware/src/main.cpp'.
- * - Configurar límites iniciales conservadores en 'config.h'.
- * * 3. COMANDOS DE TERMINAL (Desde la raíz del proyecto):
+ * @section execution Deployment Procedure (CLI)
+ * =================================================================================
+ *
+ * 1. HARDWARE PREPARATION:
+ * - Disconnect USB cable.
+ * - Ensure battery power (Servo does not work on USB only).
+ * - IMPORTANT: GPIO 2 shares the line with the Flash LED. Flashing is normal.
+ * - Reconnect USB cable for uploading.
+ *
+ * 2. SOFTWARE PREPARATION:
+ * - This code must be in 'firmware/src/main.cpp'.
+ * - Configure conservative initial limits in 'config.h'.
+ *
+ * 3. TERMINAL COMMANDS (From project root):
  * $ cd firmware
  * $ pio run -t upload
  * $ pio device monitor -b 115200
- * * 4. VERIFICACIÓN Y CALIBRACIÓN:
- * - Observar el giro de las ruedas.
- * - Si falta giro: Aumentar/Disminuir ángulo en 'config.h' (5 grados cada vez).
- * - Si el servo hace ruido (zumbido) en los topes: RETROCEDER 5-10 grados inmediatamente.
- * * 5. PRESERVACIÓN:
- * - Una vez calibrado, mover este código a 'firmware/examples/test_servo_calibration.cpp'.
+ *
+ * 4. VERIFICATION AND CALIBRATION:
+ * - Observe wheel turning.
+ * - If turning is insufficient: Increase/Decrease angle in 'config.h' (5 degrees at a time).
+ * - If servo makes noise (buzzing) at limits: BACK OFF 5-10 degrees immediately.
+ *
+ * 5. PRESERVATION:
+ * - Once calibrated, move this code to 'firmware/examples/test_servo_calibration.cpp'.
  * =================================================================================
  */
 
@@ -38,45 +46,45 @@
 #include "config.h"
 #include "SteeringServo.h"
 
-// Instanciamos el servo con los límites definidos en config.h
+// Instantiate servo with limits defined in config.h
 SteeringServo steering(PIN_SERVO, STEERING_CENTER, STEERING_LEFT_MAX, STEERING_RIGHT_MAX);
 
 void setup()
 {
-    // 1. Gestión de Energía
+    // 1. Power Management
     WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
 
     // 2. Serial
     Serial.begin(115200);
-    Serial.println("\n[BOOT] Test de Servo Iniciado");
+    Serial.println("\n[BOOT] Servo Test Started");
 
-    // 3. Inicio del Servo
+    // 3. Start Servo
     steering.begin();
-    Serial.println("[INFO] Servo inicializado y centrado.");
+    Serial.println("[INFO] Servo initialized and centered.");
 
-    // Espera inicial para observar el centro
+    // Initial wait to observe center
     delay(2000);
 }
 
 void loop()
 {
-    // --- 1. CENTRO ---
-    Serial.printf("[TEST] Recto (Angulo: %d)\n", STEERING_CENTER);
+    // --- 1. CENTER ---
+    Serial.printf("[TEST] Straight (Angle: %d)\n", STEERING_CENTER);
     steering.center();
     delay(2000);
 
-    // --- 2. IZQUIERDA ---
-    Serial.printf("[TEST] Izquierda (Angulo: %d)\n", STEERING_LEFT_MAX);
+    // --- 2. LEFT ---
+    Serial.printf("[TEST] Left (Angle: %d)\n", STEERING_LEFT_MAX);
     steering.turnLeft();
     delay(2000);
 
-    // --- 3. CENTRO ---
-    Serial.println("[TEST] Recto...");
+    // --- 3. CENTER ---
+    Serial.println("[TEST] Straight...");
     steering.center();
     delay(1000);
 
-    // --- 4. DERECHA ---
-    Serial.printf("[TEST] Derecha (Angulo: %d)\n", STEERING_RIGHT_MAX);
+    // --- 4. RIGHT ---
+    Serial.printf("[TEST] Right (Angle: %d)\n", STEERING_RIGHT_MAX);
     steering.turnRight();
     delay(2000);
 }

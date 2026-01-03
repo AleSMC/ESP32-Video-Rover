@@ -1,110 +1,75 @@
-# 🔧 Guía de Montaje de Hardware
+# 🔧 Hardware Setup Guide
 
-## 1. Tabla de Conexiones (Netlist Maestra - Modo Eje Sólido)
+## 1. Connection Table (Master Netlist - Solid Axle Mode)
 
-**Esta tabla es la FUENTE DE LA VERDAD.** Si el diagrama visual contradice esta tabla, **haz caso a la tabla**.
+**This table is the SOURCE OF TRUTH.** If the visual diagram contradicts this table, **follow the table**.
 
-Para esta configuración, se deben retirar los Jumpers `ENA` y `ENB` del driver L298N y realizar puentes físicos entre los pines de control para unificar la tracción.
+For this configuration, remove Jumpers `ENA` and `ENB` from the L298N driver and create physical bridges between control pins to unify traction.
 
-| Función Lógica          | Pin ESP32-CAM | Pines L298N (Puenteados) | Descripción Técnica                                    |
-| :---------------------- | :------------ | :----------------------- | :----------------------------------------------------- |
-| **Velocidad (PWM)**     | **GPIO 13**   | **ENA** + **ENB**        | Control de potencia global. Permite Coasting si PWM=0. |
-| **Sentido Avance**      | **GPIO 14**   | **IN1** + **IN3**        | Activa ambos motores hacia adelante.                   |
-| **Sentido Retroceso**   | **GPIO 15**   | **IN2** + **IN4**        | Activa ambos motores hacia atrás.                      |
-| **Servo Dirección**     | **GPIO 2**    | **Señal PWM**            | Cable Naranja/Amarillo del Servo.                      |
-| **Alimentación Lógica** | **Pin 5V**    | **5V Out**               | Alimentación del ESP32 desde el regulador del L298N.   |
-| **Tierra Común**        | **Pin GND**   | **GND**                  | **CRÍTICO:** Referencia común de voltaje.              |
-| **Reservado**           | **GPIO 12**   | _Desconectado_           | Ver sección de limitaciones abajo.                     |
+| Logic Function     | ESP32-CAM Pin | L298N Pins (Bridged) | Technical Description                           |
+| :----------------- | :------------ | :------------------- | :---------------------------------------------- |
+| **Speed (PWM)**    | **GPIO 13**   | **ENA** + **ENB**    | Global power control. Allows Coasting if PWM=0. |
+| **Forward Dir**    | **GPIO 14**   | **IN1** + **IN3**    | Activates both motors forward.                  |
+| **Reverse Dir**    | **GPIO 15**   | **IN2** + **IN4**    | Activates both motors backward.                 |
+| **Steering Servo** | **GPIO 2**    | **PWM Signal**       | Orange/Yellow Servo Cable.                      |
+| **Logic Power**    | **Pin 5V**    | **5V Out**           | ESP32 power from L298N regulator.               |
+| **Common Ground**  | **Pin GND**   | **GND**              | **CRITICAL:** Common voltage reference.         |
+| **Reserved**       | **GPIO 12**   | _Disconnected_       | See limitations section below.                  |
 
-> ⚠️ **ADVERTENCIA SOBRE GPIO 2 (SERVO):**
-> El GPIO 2 está conectado internamente al **LED Flash** de alta potencia del ESP32-CAM.
-> Al enviar señales PWM al servo, **el LED parpadeará o se encenderá**, lo cual es normal pero puede ser molesto y generar calor. Si deseas evitar esto, deberás desoldar el LED o taparlo con cinta aislante.
+> ⚠️ **WARNING ABOUT GPIO 2 (SERVO):**
+> GPIO 2 is internally connected to the ESP32-CAM **Flash LED**.
+> When sending PWM signals to the servo, **the LED will flash or turn on**, which is normal but can generate heat. To avoid this, you must desolder the LED or cover it with tape.
 
-## 1.1 Guía de Unificación de Cables (El "Hack" del Eje Sólido)
+## 1.1 Cable Unification Guide (The "Solid Axle Hack")
 
-Para controlar 4 entradas del L298N con solo 3 pines del ESP32, es necesario duplicar la señal. Existen tres métodos profesionales para lograrlo:
+To control 4 inputs of the L298N with only 3 ESP32 pins, signal duplication is required.
 
-### Opción A: Mini-Protoboard (Recomendada para Prototipos)
+### Option A: Mini-Breadboard (Recommended for Prototypes)
 
-Es la opción menos destructiva y más limpia.
+Non-destructive and clean.
 
-1. Colocar el ESP32-CAM en la protoboard.
-2. Sacar un cable desde el **GPIO 14** a una línea vacía de la protoboard.
-3. Desde esa misma línea, sacar dos cables macho-hembra: uno hacia **IN1** y otro hacia **IN3**.
-4. Repetir el proceso para el **GPIO 15** (hacia IN2 e IN4) y el **GPIO 13** (hacia ENA y ENB).
+1. Place ESP32-CAM on the breadboard.
+2. Route **GPIO 14** to an empty line.
+3. From that line, route two cables: one to **IN1** and another to **IN3**.
+4. Repeat for **GPIO 15** (to IN2/IN4) and **GPIO 13** (to ENA/ENB).
 
-### Opción B: Cables Dupont "Y" (Empalme)
+### Option B: "Y" Dupont Cables (Splicing)
 
-Si no usas protoboard en el chasis:
+If not using a chassis breadboard:
 
-1. Cortar un extremo de dos cables hembra.
-2. Pelar y unir sus puntas de cobre junto con la punta de un cable macho.
-3. Soldar la unión y proteger con tubo termorretráctil (o cinta aislante).
-   _Resultado:_ Un cable con forma de "Y" (1 Macho al ESP32 -> 2 Hembras al Driver).
+1. Cut one end of two female cables.
+2. Strip and join their copper tips with a male cable tip.
+3. Solder and protect with heat shrink tubing.
+   _Result:_ A "Y" shaped cable (1 Male to ESP32 -> 2 Females to Driver).
 
-### Opción C: Puenteado en el Driver (Soldadura)
+## 3. Troubleshooting, Technical Limitations & Pin Reservations
 
-Solo para instalaciones permanentes:
+### A. ESP32 Resets when moving Servo (Brownout)
 
-1. En la parte inferior del L298N, soldar un pequeño puente de cable entre los pines IN1 e IN3.
-2. Hacer lo mismo entre IN2-IN4 y ENA-ENB.
-3. Conectar un solo cable desde el ESP32 a cualquiera de los dos pines puenteados.
+The L298N 5V regulator may not be sufficient for WiFi + Servo simultaneously.
 
-## 2. Diagrama Visual de Componentes
+- **Solution:** Use an external 5V UBEC/Buck Converter directly from the battery for the Servo, sharing only Ground (GND).
 
-> ⚠️ **ADVERTENCIA:** La siguiente imagen muestra la ubicación de componentes, pero **LOS CABLES EN LA IMAGEN ESTÁN MAL**. Úsala solo como referencia visual de piezas, pero conecta los cables **según la tabla de arriba**.
+### B. Antenna Modification
 
-![Diagrama de Componentes](DiagramaComponentes.png)
+To optimize video range with external antenna:
 
-### Notas sobre el Driver L298N y Alimentación
+1. Locate IPEX connector near the metal shield.
+2. Verify the 0-ohm resistor position. It must bridge the path to the IPEX connector, disabling the PCB antenna.
 
-- **Batería del Proyecto:** LiPo 3S (11.1V) 2200mAh (Ref: ELL-MAX).
-  - _Nota Técnica:_ El uso de una batería de 11.1V (12.6V a plena carga) incrementa la carga térmica del regulador lineal de 5V integrado. Aunque la operación es segura, **se recomienda garantizar una ventilación adecuada** alrededor del disipador térmico para facilitar la disipación pasiva.
-- **Alimentación L298N:** Conectar Batería (+) a 12V y Batería (-) a GND.
-- **Alimentación ESP32:** Sacar un cable desde el pin **5V** del L298N hacia el pin **5V** del ESP32-CAM.
-- **Tierra Común (Ground Loop):** Es OBLIGATORIO tener un cable uniendo el GND del L298N con el GND del ESP32. Sin esto, los pines de control no funcionan.
+### C. GPIO 12 Restriction (Strapping Pin)
 
-> ⚠️ **RESTRICCIÓN DE CÓDIGO (FASE A):**
-> La reversa está deshabilitada en el firmware base. Si se envían comandos de velocidad negativa (`v < 0`), el sistema registrará un error en consola y aplicará el freno.
-> La funcionalidad de reversa solo debe habilitarse en el código fuente (`SolidAxle.cpp`) después de haber implementado la lógica de **Dynamic Dead Time** en el cliente (Paso EXTRA), para prevenir picos de corriente peligrosos al invertir la marcha.
+GPIO 12 determines internal flash voltage (VDD_SDIO) during Boot.
 
-## 3. Resolución de Problemas (Troubleshooting), Limitaciones Técnicas y Reservas de Pines
+- **Risk:** If pulled HIGH during reset, ESP32 sets flash voltage to 1.8V (instead of 3.3V), causing "Flash voltage mismatch".
+- **Design Decision:** Kept **DISCONNECTED** in this phase to ensure boot stability.
 
-### A. El ESP32 se reinicia al mover el Servo (Brownout)
+### D. mDNS Connectivity (rover.local) on Mobile Hotspots
 
-El regulador de 5V del L298N puede no ser suficiente para alimentar el WiFi y el Servo simultáneamente.
+- **Symptom:** Accessible via IP but **NOT** via name.
+- **Cause:** Mobile hotspots often block Multicast traffic.
+- **Solution:** Use direct IP when using mobile data.
 
-- **Solución 1 (Fácil):** Conectar un condensador electrolítico (ej. 1000µF / 16V) entre los pines 5V y GND, cerca del ESP32.
-- **Solución 2 (Robusta - IMPLEMENTADA):** Usar un regulador externo (UBEC/Buck Converter) de 5V solo para alimentar el Servo directamente desde la batería, compartiendo solo la tierra (GND) con el resto del sistema.
+### E. WiFi Interference Optimization (Channel 11)
 
-### B. Modificación de Antena
-
-Para usar la antena externa y optimizar el rango de video:
-
-1. Localizar el conector IPEX junto al módulo metálico.
-2. Verificar la resistencia de 0-ohm.
-3. **Acción:** Debe estar soldada en la posición que conecta hacia el conector IPEX, deshabilitando la antena de PCB.
-
-### C. Restricción del GPIO 12 (Strapping Pin)
-
-El GPIO 12 determina el voltaje interno de la memoria flash (VDD_SDIO) durante el arranque (Boot).
-
-- **Riesgo:** Si este pin se encuentra en estado ALTO (HIGH) durante el reinicio, el ESP32 configurará el voltaje de flash a 1.8V en lugar de 3.3V, provocando un fallo de arranque ("Flash voltage mismatch").
-- **Decisión de Diseño:** En la fase actual (MVP), este pin se deja **DESCONECTADO** para garantizar la estabilidad del sistema y evitar la necesidad de desconectar cables manualmente en cada reinicio.
-- **Futuro (I+D):** Se evaluará su uso para implementar un diferencial electrónico en fases avanzadas, considerando circuitos de aislamiento o pull-down externos.
-
-### D. Conectividad mDNS (rover.local) en Hotspots Móviles
-
-Si utilizas un iPhone/Android como punto de acceso ("Compartir Internet"):
-
-- **Síntoma:** Puedes acceder por IP (`http://172.20.10.x/stream`) pero **NO** por nombre (`http://rover.local/stream`).
-- **Causa:** La mayoría de sistemas operativos móviles bloquean el tráfico Multicast (mDNS) en modo Hotspot para ahorrar batería y seguridad.
-- **Solución:** Usar siempre la dirección IP directa cuando se esté en campo con datos móviles. Reservar `rover.local` para redes WiFi domésticas (Routers).
-
-### E. Optimización de Interferencias WiFi (Canal 11)
-
-En entornos saturados (Universidades, Eventos), el canal 1 suele estar inutilizable.
-
-- **Hardware:** Se ha eliminado la restricción de potencia (WiFi.setTxPower) permitiendo al ESP32 gestionar dinámicamente sus 20dBm para mantener el enlace estable incluso con ruido electromagnético de los motores.
-
-- **Configuración de Cámara:** Se ha reducido la frecuencia del reloj XCLK a 15MHz y aumentado la compresión JPEG a 60. Esto reduce el ancho de banda necesario, haciendo el sistema más robusto frente a interferencias físicas.
+- **Camera Config:** Reduced XCLK frequency to **10MHz** and increased JPEG quality to 60. This reduces bandwidth usage, making the system robust against physical interference.

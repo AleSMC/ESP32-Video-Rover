@@ -1,51 +1,57 @@
 /**
  * @file test_led_blink.cpp
- * @brief Verificación de integridad del sistema (Sanity Check).
+ * @brief System Integrity Verification (Sanity Check).
  * @author Alejandro Moyano (@AleSMC)
- * * @details
- * Módulo de prueba aislado (Standalone) para validar:
- * 1. Correcta compilación y carga del firmware (Toolchain).
- * 2. Arranque del SoC ESP32 (Boot sequence).
- * 3. Control GPIO básico (parpadeo de LED de estado).
- * * @note Hardware: LED integrado (GPIO 33 en AI-Thinker).
- * @note Lógica: Lógica negativa (Active LOW).
- * * =================================================================================
- * @section execution Procedimiento de Despliegue (CLI)
+ *
+ * @details
+ * Standalone test module to validate:
+ * 1. Correct compilation and firmware upload (Toolchain).
+ * 2. ESP32 SoC Boot sequence.
+ * 3. Basic GPIO control (Status LED blinking).
+ *
+ * @note Hardware: Onboard LED (GPIO 33 on AI-Thinker).
+ * @note Logic: Negative Logic (Active LOW).
+ *
  * =================================================================================
- * * 1. PREPARACIÓN DE SOFTWARE:
- * - Copiar el contenido íntegro de este archivo.
- * - Pegarlo en 'firmware/src/main.cpp' (sobrescribiendo el contenido actual).
- * * 2. COMANDOS DE TERMINAL (Desde la raíz del proyecto):
+ * @section execution Deployment Procedure (CLI)
+ * =================================================================================
+ *
+ * 1. SOFTWARE PREPARATION:
+ * - Copy the entire content of this file.
+ * - Paste it into 'firmware/src/main.cpp' (overwriting current content).
+ *
+ * 2. TERMINAL COMMANDS (From project root):
  * $ cd firmware
  * $ pio run -t upload
  * $ pio device monitor -b 115200
- * * 3. VERIFICACIÓN:
- * - El LED rojo trasero debe parpadear (Breve destello cada 2 segundos).
- * - El monitor serie debe mostrar "Heartbeat: System Active".
+ *
+ * 3. VERIFICATION:
+ * - The rear Red LED should blink (Brief flash every 2 seconds).
+ * - The serial monitor should display "Heartbeat: System Active".
  * =================================================================================
  */
 
 #include <Arduino.h>
 
-// Definición del Pin del LED integrado.
-// GPIO 33 es el estándar para la placa AI-Thinker ESP32-CAM.
+// Onboard LED Pin Definition.
+// GPIO 33 is the standard for the AI-Thinker ESP32-CAM board.
 #define STATUS_LED_PIN 33
 
 /**
- * @brief Inicialización del sistema.
+ * @brief System Initialization.
  */
 void setup()
 {
-    // Inicialización del bus serie para salida de logs de depuración
+    // Initialize serial bus for debug logs
     Serial.begin(115200);
 
-    // Configuración del GPIO como salida digital
+    // Configure GPIO as digital output
     pinMode(STATUS_LED_PIN, OUTPUT);
 
-    // Retardo de estabilización para el monitor serie
+    // Stabilization delay for the serial monitor to catch up
     delay(1000);
 
-    // Logs de inicio del sistema
+    // System Boot Logs
     Serial.println("\n--- SYSTEM DIAGNOSTIC: LED BLINK TEST ---");
     Serial.println("[INFO] Boot: SUCCESS");
     Serial.println("[INFO] Board: ESP32-CAM AI-Thinker");
@@ -53,19 +59,19 @@ void setup()
 }
 
 /**
- * @brief Bucle principal (Heartbeat).
+ * @brief Main Loop (Heartbeat).
  */
 void loop()
 {
-    // Emisión de señal de vida (Heartbeat) al puerto serie
+    // Emit heartbeat signal to serial port
     Serial.println("[STATUS] Heartbeat: System Active");
 
-    // Ciclo de indicación visual (Active LOW)
-    // Estado ON (Cierre a tierra)
+    // Visual indication cycle (Active LOW)
+    // ON State (Sink to Ground)
     digitalWrite(STATUS_LED_PIN, LOW);
-    delay(100); // Duración del pulso: 100ms
+    delay(100); // Pulse duration: 100ms
 
-    // Estado OFF (Alta impedancia/VCC)
+    // OFF State (High Impedance/VCC)
     digitalWrite(STATUS_LED_PIN, HIGH);
-    delay(2000); // Frecuencia de ciclo: ~0.5Hz
+    delay(2000); // Cycle frequency: ~0.5Hz
 }

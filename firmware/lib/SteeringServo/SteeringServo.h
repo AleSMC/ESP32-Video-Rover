@@ -1,11 +1,11 @@
 /**
  * @file SteeringServo.h
- * @brief Controlador de Dirección Ackermann (Servo).
+ * @brief Ackermann Steering Controller (Servo).
  * @author Alejandro Moyano (@AleSMC)
  * @version 1.0.0
  * @details
- * Wrapper sobre la librería ESP32Servo que añade una capa de seguridad (Hard Limits).
- * Traduce comandos lógicos (0-180 grados) a señales PWM protegidas físicamente.
+ * Wrapper around the ESP32Servo library adding a safety layer (Hard Limits).
+ * Translates logical commands (0-180 degrees) into physically protected PWM signals.
  */
 
 #pragma once
@@ -15,53 +15,53 @@
 class SteeringServo
 {
 private:
-    Servo _servo; ///< Instancia del driver de bajo nivel
-    int _pin;     ///< Pin GPIO de señal PWM
+    Servo _servo; ///< Low-level driver instance
+    int _pin;     ///< PWM signal GPIO pin
 
-    // --- Parámetros de Calibración ---
-    int _angleCenter; ///< Valor calibrado para ir recto
-    int _angleLeft;   ///< Límite físico izquierdo
-    int _angleRight;  ///< Límite físico derecho
+    // --- Calibration Parameters ---
+    int _angleCenter; ///< Calibrated value for going straight
+    int _angleLeft;   ///< Physical left limit
+    int _angleRight;  ///< Physical right limit
 
-    // --- Límites de Seguridad (Calculados) ---
-    int _minLimit; ///< El valor numérico más bajo permitido (ej: 70)
-    int _maxLimit; ///< El valor numérico más alto permitido (ej: 110)
+    // --- Safety Limits (Calculated) ---
+    int _minLimit; ///< Lowest allowed numerical value (e.g., 70)
+    int _maxLimit; ///< Highest allowed numerical value (e.g., 110)
 
 public:
     /**
-     * @brief Constructor con límites físicos.
-     * @param pin GPIO del servo.
-     * @param center Ángulo central (idealmente 90).
-     * @param leftMax Ángulo máximo hacia la izquierda.
-     * @param rightMax Ángulo máximo hacia la derecha.
+     * @brief Constructor with physical limits.
+     * @param pin Servo GPIO.
+     * @param center Center angle (ideally 90).
+     * @param leftMax Max left angle.
+     * @param rightMax Max right angle.
      */
     SteeringServo(int pin, int center, int leftMax, int rightMax);
 
     /**
-     * @brief Inicializa el PWM del servo a 50Hz.
+     * @brief Initializes servo PWM at 50Hz.
      */
     void begin();
 
     /**
-     * @brief Coloca las ruedas rectas.
+     * @brief Sets wheels to straight position.
      */
     void center();
 
     /**
-     * @brief Gira al tope izquierdo permitido.
+     * @brief Turns to the allowed left stop.
      */
     void turnLeft();
 
     /**
-     * @brief Gira al tope derecho permitido.
+     * @brief Turns to the allowed right stop.
      */
     void turnRight();
 
     /**
-     * @brief Mueve el servo a un ángulo específico con seguridad.
-     * @param angle Ángulo objetivo (0-180).
-     * @note Si el ángulo excede los límites configurados, se recorta (clamping)
-     * automáticamente para no forzar el mecanismo.
+     * @brief Moves the servo to a specific angle safely.
+     * @param angle Target angle (0-180).
+     * @note If the angle exceeds configured limits, it is automatically clamped
+     * to avoid forcing the mechanism.
      */
     void write(int angle);
 };

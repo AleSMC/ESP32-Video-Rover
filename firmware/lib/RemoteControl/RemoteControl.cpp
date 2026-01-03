@@ -1,100 +1,100 @@
 /**
  * @file RemoteControl.cpp
- * @brief Implementación del Protocolo de Control UDP (Baja Latencia).
+ * @brief UDP Control Protocol Implementation (Low Latency).
  * @author Alejandro Moyano (@AleSMC)
  * @details
- * Implementa un protocolo binario de 2 bytes para control de tracción y dirección.
- * Incluye mecanismos de seguridad (Failsafe) y optimización de CPU (Caché de estado)
- * para evitar escrituras redundantes en los drivers PWM.
+ * Implements a 2-byte binary protocol for traction and steering control.
+ * Includes safety mechanisms (Failsafe) and CPU optimization (State Cache)
+ * to avoid redundant writes to PWM drivers.
  */
 
 #include "RemoteControl.h"
 
 RemoteControl::RemoteControl(SolidAxle *motors, SteeringServo *steering)
 {
-    // Inyección de dependencias hardware
+    // Hardware dependency injection
     _motors = motors;
     _steering = steering;
 
     _lastPacketTime = 0;
     _failsafeActive = false;
 
-    // Inicializamos la caché con valores fuera de rango (255) para
-    // forzar la actualización física del hardware con el primer paquete recibido.
+    // Initialize cache with out-of-range values (255) to
+    // force physical hardware update on the first received packet.
     _prevSpeed = 255;
     _prevAngle = 255;
 }
 
 void RemoteControl::begin()
 {
-    _udp.begin(UDP_PORT); // Puerto definido en config.h (9999)
-    Serial.printf("[UDP] Escuchando protocolo binario en puerto %d\n", UDP_PORT);
+    _udp.begin(UDP_PORT); // Port defined in config.h
+    Serial.printf("[UDP] Listening for binary protocol on port %d\n", UDP_PORT);
 }
 
 void RemoteControl::listen()
 {
     int packetSize = _udp.parsePacket();
 
-    // Filtro básico: Solo procesamos si el paquete tiene el tamaño del protocolo (2 bytes)
-    // Byte 0: Tracción | Byte 1: Dirección
+    // Basic Filter: Process only if packet matches protocol size (2 bytes)
+    // Byte 0: Traction | Byte 1: Steering
     if (packetSize >= 2)
     {
-        _udp.read(_packetBuffer, 2); // Leemos solo los 2 bytes relevantes
+        _udp.read(_packetBuffer, 2); // Read only relevant 2 bytes
 
-        // DEBUG: Mostrar datos recibidos
+        // DEBUG: Show received data
         // Serial.printf("[UDP] Motor: %d | Servo: %d\n", _packetBuffer[0], _packetBuffer[1]);
 
         // 1. WATCHDOG RESET
-        // Hemos recibido señal de vida del controlador, reseteamos el temporizador.
+        // Received heartbeat/signal from controller, reset timer.
         _lastPacketTime = millis();
 
-        // 2. GESTIÓN DE RECUPERACIÓN (SALIDA DE FAILSAFE)
-        // Si el robot estaba en modo emergencia y recibe señal, reactivamos el control.
+        // 2. RECOVERY MANAGEMENT (EXIT FAILSAFE)
+        // If rover was in emergency mode and receives signal, reactivate control.
         if (_failsafeActive)
         {
             _failsafeActive = false;
-            // Invalidamos la caché (_prev) para obligar a que los nuevos valores
-            // se apliquen inmediatamente al hardware, aunque coincidan con los viejos.
+            // Invalidate cache (_prev) to force immediate hardware update
+            // even if new values match old ones.
             _prevSpeed = 255;
             _prevAngle = 255;
-            Serial.println("[UDP] Señal recuperada. Control reactivado.");
+            Serial.println("[UDP] Signal recovered. Control reactivated.");
         }
 
-        // --- BYTE 0: TRACCIÓN (Throttle) ---
+        // --- BYTE 0: TRACTION (Throttle) ---
         uint8_t speedCode = _packetBuffer[0];
 
-        // OPTIMIZACIÓN DE CACHÉ: Solo escribir al motor si el valor ha cambiado.
-        // Esto ahorra ciclos de CPU y llamadas innecesarias al bus PWM.
+        // CACHE OPTIMIZATION: Write to motor only if value changed.
+        // Saves CPU cycles and unnecessary PWM bus calls.
         if (speedCode != _prevSpeed)
         {
-            _prevSpeed = speedCode; // Actualizar caché
+            _prevSpeed = speedCode; // Update cache
 
             if (speedCode == 0)
             {
-                _motors->coast(); // 0 = Inercia (Soltar acelerador)
+                _motors->coast(); // 0 = Inertia (Release throttle)
             }
             else if (speedCode == 1)
             {
-                _motors->brake(); // 1 = Freno Activo (Pisar freno)
+                _motors->brake(); // 1 = Active Brake
             }
             else
             {
-                // Valores 2-255 se mapean directamente a PWM.
-                // SolidAxle gestiona internamente la dirección de los pines.
+                // Values 2-255 map directly to PWM.
+                // SolidAxle internally manages pin direction.
                 _motors->drive((int)speedCode);
             }
         }
 
-        // --- BYTE 1: DIRECCIÓN (Steering) ---
+        // --- BYTE 1: STEERING ---
         uint8_t angle = _packetBuffer[1];
 
-        // OPTIMIZACIÓN DE CACHÉ: Solo escribir al servo si el ángulo ha cambiado.
+        // CACHE OPTIMIZATION: Write to servo only if angle changed.
         if (angle != _prevAngle)
         {
-            _prevAngle = angle; // Actualizar caché
+            _prevAngle = angle; // Update cache
 
-            // Pasamos el ángulo crudo. La clase SteeringServo se encarga
-            // internamente de aplicar 'constrain' y proteger los topes físicos.
+            // Pass raw angle. SteeringServo class internally handles
+            // 'constrain' and physical limits.
             _steering->write((int)angle);
         }
     }
@@ -102,21 +102,21 @@ void RemoteControl::listen()
 
 void RemoteControl::checkFailsafe()
 {
-    // Solo verificamos si el sistema NO está ya en estado de fallo.
+    // Check only if system is NOT already in failure state.
     if (!_failsafeActive)
     {
-        // Si ha pasado más tiempo del permitido sin recibir paquetes UDP...
+        // If more time than allowed has passed without UDP packets...
         if (millis() - _lastPacketTime > UDP_FAILSAFE_MS)
         {
-            // ...ACTIVAR PROTOCOLO DE PARADA DE EMERGENCIA.
-            Serial.println("[FAILSAFE] Pérdida de señal (Timeout). PARADA DE EMERGENCIA.");
+            // ...ACTIVATE EMERGENCY STOP PROTOCOL.
+            Serial.println("[FAILSAFE] Signal Lost (Timeout). EMERGENCY STOP.");
 
-            // Acciones físicas inmediatas
-            _motors->brake();    // Clavar frenos
-            _steering->center(); // Centrar dirección
+            // Immediate physical actions
+            _motors->brake();    // Hard brake
+            _steering->center(); // Center steering
 
-            // Marcar estado activo para evitar repetir estas llamadas
-            // en cada ciclo del loop (ahorro de recursos).
+            // Mark state active to avoid repeating these calls
+            // in every loop cycle (resource saving).
             _failsafeActive = true;
         }
     }

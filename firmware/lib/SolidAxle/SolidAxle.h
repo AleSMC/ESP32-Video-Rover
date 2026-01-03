@@ -1,12 +1,12 @@
 /**
  * @file SolidAxle.h
- * @brief Controlador de Tracción Unificada (Topología Eje Sólido).
+ * @brief Unified Traction Controller (Solid Axle Topology).
  * @author Alejandro Moyano (@AleSMC)
  * @version 1.0.0
  * @details
- * Gestiona dos motores DC conectados en paralelo (mismo PWM, misma Dirección).
- * Abstrae la lógica del puente H (L298N) y provee métodos de seguridad para
- * evitar picos de corriente inductiva (Back-EMF).
+ * Manages two DC motors connected in parallel (same PWM, same Direction).
+ * Abstracts H-Bridge (L298N) logic and provides safety methods to
+ * avoid inductive current spikes (Back-EMF).
  */
 
 #pragma once
@@ -15,56 +15,56 @@
 class SolidAxle
 {
 private:
-    // --- Pines de Hardware (Configuración L298N) ---
-    int _pinFwd; ///< Pin lógico para activar puente H en sentido horario
-    int _pinRev; ///< Pin lógico para activar puente H en sentido anti-horario
-    int _pinPWM; ///< Pin de Habilitación (Enable) para modulación de ancho de pulso
+    // --- Hardware Pins (L298N Configuration) ---
+    int _pinFwd; ///< Logic pin to activate H-Bridge in forward direction
+    int _pinRev; ///< Logic pin to activate H-Bridge in reverse direction
+    int _pinPWM; ///< Enable Pin for Pulse Width Modulation
 
-    // --- Estado Interno ---
-    int _velocidadActual; ///< Última velocidad comandada (-255 a 255)
+    // --- Internal State ---
+    int _velocidadActual; ///< Last commanded speed (-255 to 255)
 
-    // --- Configuración PWM (ESP32 LEDC) ---
-    const int _pwmFreq = 1000;    ///< Frecuencia 1kHz (Óptima para motores DC genéricos)
-    const int _pwmChannel = 0;    ///< Canal PWM 0
-    const int _pwmResolution = 8; ///< Resolución 8 bits (Rango 0-255)
+    // --- PWM Configuration (ESP32 LEDC) ---
+    const int _pwmFreq = 1000;    ///< 1kHz Frequency (Optimal for generic DC motors)
+    const int _pwmChannel = 0;    ///< PWM Channel 0
+    const int _pwmResolution = 8; ///< 8-bit Resolution (Range 0-255)
 
 public:
     /**
-     * @brief Constructor del driver.
-     * @param pinFwd GPIO conectado a IN1+IN3.
-     * @param pinRev GPIO conectado a IN2+IN4.
-     * @param pinPWM GPIO conectado a ENA+ENB.
+     * @brief Driver Constructor.
+     * @param pinFwd GPIO connected to IN1+IN3.
+     * @param pinRev GPIO connected to IN2+IN4.
+     * @param pinPWM GPIO connected to ENA+ENB.
      */
     SolidAxle(int pinFwd, int pinRev, int pinPWM);
 
     /**
-     * @brief Inicializa los pines GPIO y el periférico LEDC (PWM).
-     * @note Estado inicial: Freno activado.
+     * @brief Initializes GPIO pins and LEDC peripheral (PWM).
+     * @note Initial state: Brake activated.
      */
     void begin();
 
     /**
-     * @brief Comando principal de movimiento.
-     * @param velocidad Valor con signo [-255 a 255].
-     * - Positivo: Avance.
-     * - Negativo: Retroceso (Bloqueado por defecto en Fase A).
-     * - 0: Coast (Inercia).
-     * @warning Incluye protección de rango. Valores >255 son ignorados.
+     * @brief Main movement command.
+     * @param velocidad Signed value [-255 to 255].
+     * - Positive: Forward.
+     * - Negative: Reverse (Blocked by default in Phase A).
+     * - 0: Coast (Inertia).
+     * @warning Includes range protection. Values >255 are ignored.
      */
     void drive(int velocidad);
 
     /**
-     * @brief Freno Magnético (Short Brake).
-     * @details Pone los pines de control en LOW y el PWM al máximo.
-     * Esto cortocircuita las bobinas del motor, generando una fuerza contraelectromotriz
-     * que detiene el eje rápidamente.
+     * @brief Magnetic Brake (Short Brake).
+     * @details Sets control pins to LOW and PWM to max.
+     * This short-circuits the motor coils, generating a back-electromotive force
+     * that stops the axle quickly.
      */
     void brake();
 
     /**
-     * @brief Modo Inercia (Coasting).
-     * @details Deshabilita el puente H (Alta Impedancia).
-     * El motor queda desconectado eléctricamente y gira libremente por inercia.
+     * @brief Inertia Mode (Coasting).
+     * @details Disables the H-Bridge (High Impedance).
+     * The motor remains electrically disconnected and spins freely by inertia.
      */
     void coast();
 };

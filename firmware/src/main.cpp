@@ -1,23 +1,23 @@
 /**
  * @file main.cpp
  * @brief Firmware Final v1.0 - ESP32 Video Rover.
- * @details Orquestador principal del sistema. Integra:
- * - Capa C.2: Video Streaming (MJPEG via HTTP)
- * - Capa C.1: Red Híbrida (WiFi STA/AP Failover)
- * - Capa D: Control Remoto UDP (Protocolo Binario + Seguridad)
+ * @details Main System Orchestrator. Integrates:
+ * - Layer C.2: Video Streaming (MJPEG via HTTP)
+ * - Layer C.1: Hybrid Network (WiFi STA/AP Failover)
+ * - Layer D: UDP Remote Control (Binary Protocol + Safety)
  * @author Alejandro Moyano (@AleSMC)
- * @note --- INSTRUCCIONES DE USO (PLATFORMIO) ---
- * 1. Subir Firmware:   pio run -t upload
- * 2. Monitor Serie:    pio device monitor -b 115200
- * @warning Si la subida falla, conecta GPIO0 a GND (Botón IO0) y pulsa Reset.
+ * @note --- USAGE INSTRUCTIONS (PLATFORMIO) ---
+ * 1. Upload Firmware:   pio run -t upload
+ * 2. Serial Monitor:    pio device monitor -b 115200
+ * @warning If upload fails, connect GPIO0 to GND (IO0 Button) and press Reset.
  */
 
 #include <Arduino.h>
-#include <WiFi.h> // [COOL-DOWN] Necesario para ajustar potencia TX
+#include <WiFi.h> // [COOL-DOWN] Required to adjust TX power
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
 
-// --- LIBRERÍAS DEL PROYECTO ---
+// --- PROJECT LIBRARIES ---
 #include "config.h"
 #include "NetworkManager.h"
 #include "CameraServer.h"
@@ -26,124 +26,124 @@
 #include "RemoteControl.h"
 
 // =============================================================================
-// INSTANCIAS GLOBALES (Arquitectura de Servicios)
+// GLOBAL INSTANCES (Service Architecture)
 // =============================================================================
 
-// 1. Gestores de Alto Nivel (Red y Video)
+// 1. High-Level Managers (Network and Video)
 NetworkManager network;
 CameraServer camera;
 
-// 2. Drivers de Hardware (Actuadores Físicos)
-// Instanciamos los objetos con los pines definidos en 'config.h'
+// 2. Hardware Drivers (Physical Actuators)
+// We instantiate objects with pins defined in 'config.h'
 SolidAxle motors(PIN_MOTOR_FWD, PIN_MOTOR_REV, PIN_MOTOR_PWM);
 SteeringServo steering(PIN_SERVO, STEERING_CENTER, STEERING_LEFT_MAX, STEERING_RIGHT_MAX);
 
-// 3. Controlador Lógico (Inyección de Dependencias)
-// Pasamos los punteros (&) de los drivers al controlador remoto.
-// Esto permite que 'remote' manipule 'motors' y 'steering' sin poseerlos.
+// 3. Logic Controller (Dependency Injection)
+// We pass pointers (&) of the drivers to the remote controller.
+// This allows 'remote' to manipulate 'motors' and 'steering' without owning them.
 RemoteControl remote(&motors, &steering);
 
 // =============================================================================
-// SETUP (Inicialización del Sistema)
+// SETUP (System Initialization)
 // =============================================================================
 void setup()
 {
-    // 1. GESTIÓN DE ENERGÍA (CRÍTICO)
-    // Desactivar el Brownout Detector. El arranque del WiFi y Motores genera
-    // picos de corriente que podrían reiniciar el ESP32 si esto estuviera activo.
+    // 1. POWER MANAGEMENT (CRITICAL)
+    // Disable Brownout Detector. WiFi and Motor startup generates
+    // current spikes that could reset the ESP32 if this were active.
     WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
 
-    // 2. INICIO PUERTO SERIE (Debug)
+    // 2. START SERIAL PORT (Debug)
     Serial.begin(115200);
     delay(1000);
 
-    // [COOL-DOWN] 3. ASEGURAR FLASH APAGADO (GPIO 4)
-    // El pin del flash a veces queda flotando y genera calor/consumo fantasma.
+    // [COOL-DOWN] 3. ENSURE FLASH OFF (GPIO 4)
+    // The flash pin sometimes floats and generates heat/phantom power drain.
     pinMode(4, OUTPUT);
     digitalWrite(4, LOW);
 
-    // 4. INICIALIZAR ACTUADORES FÍSICOS
-    // Es seguro iniciarlos antes que el WiFi.
-    Serial.println("\n[BOOT] Inicializando Motores y Servo...");
+    // 4. INITIALIZE PHYSICAL ACTUATORS
+    // Safe to init hardware before WiFi.
+    Serial.println("\n[BOOT] Initializing Motors and Servo...");
     motors.begin();
     steering.begin();
-    steering.center(); // Posición segura inicial (Ruedas rectas)
+    steering.center(); // Safe initial position (Straight wheels)
 
-    // 5. INICIALIZAR CÁMARA
-    // Prioridad alta: La cámara requiere reservar grandes bloques de memoria (DMA/PSRAM).
-    // Hacemos esto antes de iniciar el stack WiFi para evitar fragmentación de RAM.
-    Serial.println("[BOOT] Inicializando Hardware de Video...");
+    // 5. INITIALIZE CAMERA
+    // High Priority: Camera needs to reserve large memory blocks (DMA/PSRAM).
+    // We do this before starting the WiFi stack to prevent RAM fragmentation.
+    Serial.println("[BOOT] Initializing Video Hardware...");
     if (camera.init())
     {
-        Serial.println("[BOOT] Cámara OV2640 lista.");
+        Serial.println("[BOOT] OV2640 Camera ready.");
     }
     else
     {
-        Serial.println("[ERROR] No se detecta la cámara. REVISA CABLE FLEX.");
-        // Bucle infinito de error para proteger el hardware
+        Serial.println("[ERROR] Camera not detected. CHECK FLEX CABLE.");
+        // Infinite error loop to protect hardware
         while (true)
         {
             delay(1000);
         }
     }
 
-    // 6. INICIAR STACK DE RED
-    // Proceso bloqueante (~10s máx) que conecta al WiFi o crea el AP.
+    // 6. START NETWORK STACK
+    // Blocking process (~10s max) that connects to WiFi or creates AP.
     network.begin();
 
-    // // [COOL-DOWN] 7. REDUCIR POTENCIA WIFI (Opcional)
-    // // Al conectar al iPhone (corta distancia), no necesitamos 20dBm.
-    // // WIFI_POWER_11dBm ahorra ~100mA y reduce mucho el calor.
+    // // [COOL-DOWN] 7. REDUCE WIFI POWER (Optional)
+    // // When connecting to iPhone (short range), we don't need 20dBm.
+    // // WIFI_POWER_11dBm saves ~100mA and significantly reduces heat.
     // WiFi.setTxPower(WIFI_POWER_11dBm);
-    // Serial.println("[ENERGY] Potencia WiFi reducida a 11dBm.");
+    // Serial.println("[ENERGY] WiFi Power reduced to 11dBm.");
 
-    // 8. ARRANCAR SERVICIOS EN SEGUNDO PLANO
-    camera.startServer(); // Servidor Web asíncrono (Puerto 80)
-    remote.begin();       // Escucha UDP (Puerto 9999)
+    // 8. START BACKGROUND SERVICES
+    camera.startServer(); // Async Web Server (Port 80)
+    remote.begin();       // UDP Listener (Port 9999)
 
-    // REPORTE DE ESTADO FINAL
-    Serial.println("\n[BOOT] SISTEMA ONLINE - ROVER LISTO.");
+    // FINAL STATUS REPORT
+    Serial.println("\n[BOOT] SYSTEM ONLINE - ROVER READY.");
     Serial.printf("[INFO] Video Stream: http://%s.local/stream\n", MDNS_NAME);
-    Serial.printf("[INFO] Video Stream por IP:   http://%s/stream\n", network.getIP().c_str());
-    Serial.printf("[INFO] Control UDP:  Puerto %d\n", UDP_PORT);
+    Serial.printf("[INFO] Video Stream by IP:   http://%s/stream\n", network.getIP().c_str());
+    Serial.printf("[INFO] UDP Control:  Port %d\n", UDP_PORT);
 }
 
 // =============================================================================
-// LOOP (Bucle Principal No Bloqueante)
+// LOOP (Non-Blocking Main Loop)
 // =============================================================================
 void loop()
 {
-    // 1. Mantenimiento de Red
-    // (Actualmente pasivo gracias a FreeRTOS, reservado para lógica futura)
+    // 1. Network Maintenance
+    // (Currently passive thanks to FreeRTOS, reserved for future logic)
     network.update();
 
-    // 2. Proceso de Control (Tiempo Real)
-    // Lee buffer UDP, decodifica protocolo y actualiza motores/servo.
+    // 2. Control Process (Real-Time)
+    // Reads UDP buffer, decodes protocol, and updates motors/servo.
     remote.listen();
 
-    // 3. Sistema de Seguridad (Watchdog)
-    // Comprueba si se ha perdido la conexión con el piloto.
+    // 3. Safety System (Watchdog)
+    // Checks if connection with pilot has been lost.
     remote.checkFailsafe();
 
-    // 4. Telemetría (Heartbeat)
-    // Imprime estado cada 5 segundos sin usar delay() para no bloquear el control.
+    // 4. Telemetry (Heartbeat)
+    // Prints status every 5 seconds without using delay() to avoid blocking control.
     static unsigned long lastTime = 0;
     if (millis() - lastTime > 5000)
     {
         lastTime = millis();
-        Serial.printf("[ALIVE] Modo: %s | IP: %s | Uptime: %lu s\n",
+        Serial.printf("[ALIVE] Mode: %s | IP: %s | Uptime: %lu s\n",
                       network.getMode().c_str(),
                       network.getIP().c_str(),
                       millis() / 1000);
 
-        // Imprimimos RSSI para asegurar que bajar la potencia no afectó la señal
+        // Print RSSI to ensure lowering power didn't kill signal
         long rssi = WiFi.RSSI();
         Serial.printf("[STATUS] IP: %s | Signal: %ld dBm | Temp: OK\n",
                       network.getIP().c_str(), rssi);
     }
 
-    // [COOL-DOWN] 5. REFRIGERACIÓN DE CPU
-    // Crítico: Un delay pequeño permite al RTOS poner la CPU en modo "Idle".
-    // Esto baja la temperatura drásticamente sin afectar la respuesta (5ms es imperceptible).
+    // [COOL-DOWN] 5. CPU COOL-DOWN
+    // Critical: A small delay allows the RTOS to put the CPU into "Idle" mode.
+    // This drops temperature drastically without affecting response (5ms is imperceptible).
     delay(5);
 }

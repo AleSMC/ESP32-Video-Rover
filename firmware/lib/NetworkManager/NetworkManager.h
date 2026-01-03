@@ -1,61 +1,61 @@
 /**
  * @file NetworkManager.h
- * @brief Contrato de la interfaz de conectividad WiFi (STA + AP).
+ * @brief WiFi Connectivity Interface Contract (STA + AP).
  * @author Alejandro Moyano (@AleSMC)
  * @version 1.1.0
  * @details
- * Expone métodos para gestionar la conexión sin bloquear el hilo principal
- * indefinidamente y provee getters para telemetría.
+ * Exposes methods to manage the connection without blocking the main thread
+ * indefinitely and provides getters for telemetry.
  */
 
 #pragma once
 #include <Arduino.h>
 #include <WiFi.h>
 #include <ESPmDNS.h>
-#include "secrets.h" // Dependencia crítica: WIFI_SSID, AP_SSID, etc.
+#include "secrets.h" // Critical dependency: WIFI_SSID, AP_SSID, etc.
 
 class NetworkManager
 {
 private:
     /**
-     * @brief Estado actual de operación.
-     * - true: Modo Emergencia (Hotspot propio).
-     * - false: Modo Normal (Conectado a Router).
+     * @brief Current operation state.
+     * - true: Emergency Mode (Own Hotspot).
+     * - false: Normal Mode (Connected to Router).
      */
     bool _isAP;
 
 public:
     /**
-     * @brief Constructor. Inicializa el estado por defecto a Cliente (STA).
+     * @brief Constructor. Initializes default state to Client (STA).
      */
     NetworkManager();
 
     /**
-     * @brief Inicia la máquina de estados de red.
+     * @brief Starts the network state machine.
      * @details
-     * 1. Intenta conectar a WIFI_SSID (timeout 10s).
-     * 2. Si falla, levanta AP_SSID (Red de emergencia).
-     * 3. Inicia mDNS para resolución de nombres.
-     * @note Esta función es bloqueante durante el intento de conexión.
+     * 1. Attempts to connect to WIFI_SSID (10s timeout).
+     * 2. If it fails, raises AP_SSID (Emergency Network).
+     * 3. Starts mDNS for name resolution.
+     * @note This function is blocking during the connection attempt.
      */
     void begin();
 
     /**
-     * @brief Ciclo de mantenimiento (Tick).
-     * @note Actualmente pasivo gracias a la gestión interna de FreeRTOS en ESP32,
-     * pero reservado para futura lógica de reconexión automática (Watchdog de Red).
+     * @brief Maintenance cycle (Tick).
+     * @note Currently passive thanks to internal FreeRTOS management on ESP32,
+     * but reserved for future automatic reconnection logic (Network Watchdog).
      */
     void update();
 
     /**
-     * @brief Devuelve la IP asignada.
-     * @return String con formato "XXX.XXX.XXX.XXX". Depende del modo (STA vs AP).
+     * @brief Returns the assigned IP.
+     * @return String formatted "XXX.XXX.XXX.XXX". Depends on mode (STA vs AP).
      */
     String getIP();
 
     /**
-     * @brief Devuelve una descripción legible del modo actual.
-     * @return "STA (WiFi Hogar)" o "AP (Hotspot)".
+     * @brief Returns a readable description of the current mode.
+     * @return "STA (Home WiFi)" or "AP (Hotspot)".
      */
     String getMode();
 };
