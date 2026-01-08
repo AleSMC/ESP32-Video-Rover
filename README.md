@@ -85,6 +85,39 @@ To see debug logs (Assigned IP, Motor State):
 > **⚠️ SAFETY NOTE (REVERSE):**
 > Reverse logic is **disabled in base firmware** (Phase A) to prevent Back-EMF current spikes. Safe reverse implementation (with Dynamic Dead Time) is handled via the Python Client in advanced stages.
 
+## 🎮 Controls & Telemetry
+
+The Rover relies on a custom low-latency communication protocol designed to prioritize responsiveness over reliability, a standard approach in FPV robotics.
+
+### 1. Communication Protocol (UDP Layer)
+
+Unlike the video stream which uses HTTP (TCP), the control link utilizes **UDP (User Datagram Protocol)** over port `9999`.
+
+- **Why UDP?** TCP introduces latency due to handshakes and ACKs. UDP allows "fire-and-forget" transmission, ensuring the rover always acts on the _latest_ command available.
+- **Packet Structure:** The Python client samples the keyboard state at **5Hz** and encodes it into a **2-byte binary payload**:
+  - `Byte[0]`: Traction State (0=Coast, 1=Brake, 2-255=PWM Speed).
+  - `Byte[1]`: Steering Angle (0-180 degrees).
+
+### 2. Input Mapping & Behavior
+
+| Key / Combination  | Function            | Mechanical Action   | Technical Description                                                                                        |
+| :----------------- | :------------------ | :------------------ | :----------------------------------------------------------------------------------------------------------- |
+| **NONE (Release)** | **Inertia (Coast)** | Motors Disconnected | **High Impedance (Hi-Z).** H-Bridge disables output. Current drops to 0A, allowing the rover to roll freely. |
+| **W**              | **Forward**         | Normal Speed        | Applies **standard PWM duty cycle** (e.g., ~70%) to the traction motors.                                     |
+| **W + SPACE**      | **Turbo Boost**     | Max Speed           | Bypasses speed limiter, increasing **PWM to 100% (255)**. Ideal for straightaways.                           |
+| **S**              | **Reverse / Brake** | Active Braking      | **Short Brake Mode.** Driver pulls motor terminals to Ground (LOW/LOW), using Back-EMF to stop rotation.     |
+| **A / D**          | **Steering**        | Ackermann Turn      | Maps Servo to `STEERING_LEFT_MAX` or `RIGHT_MAX`. Includes software end-stops.                               |
+| **ESC**            | **Emergency Stop**  | System Halt         | Sends a "Kill Signal" packet and terminates client connection.                                               |
+
+### 3. Priority Hierarchy
+
+To prevent conflicting commands, the firmware implements strict **Priority Logic**:
+
+1.  **FAILSAFE (Highest):** If no UDP packets >1000ms -> **Stop**.
+2.  **BRAKE (`S`):** Overrides acceleration. Safety first.
+3.  **STEERING (`A` vs `D`):** If both pressed -> **Center (90°)**.
+4.  **THROTTLE (`W`):** Active only if Brake is released.
+
 ## ✅ Development Roadmap
 
 - [x] **Step 0:** Environment Setup & GitOps.
