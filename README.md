@@ -2,7 +2,14 @@
 
 > **Hybrid WiFi RC vehicle with MJPEG video transmission and UDP control.**
 
+[![Instructables](https://img.shields.io/badge/Instructables-Step%20by%20Step%20Guide-F96854?style=for-the-badge&logo=instructables&logoColor=white)](https://www.instructables.com/Esp-32-Cam-Video-Rover/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
+
 This project implements a remote-controlled rover using an **ESP32-CAM** (AI Thinker). The system operates under a **"Solid Axle"** topology (Unified Rear Traction) to ensure startup stability and resource efficiency, featuring Ackermann steering via a servo motor.
+
+**📖 Want to build this?** Check out the complete hardware tutorial on [Instructables](https://www.instructables.com/Esp-32-Cam-Video-Rover/).
+
+---
 
 ## 📂 Project Structure
 
