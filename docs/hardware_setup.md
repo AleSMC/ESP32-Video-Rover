@@ -1,4 +1,4 @@
-# 🔧 Hardware Setup Guide
+# Hardware Setup Guide
 
 ## 1. Connection Table (Master Netlist - Solid Axle Mode)
 

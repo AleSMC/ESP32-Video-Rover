@@ -1,4 +1,4 @@
-# 🚜 ESP32-Video-Rover
+# ESP32-Video-Rover
 
 > **Hybrid WiFi RC vehicle with MJPEG video transmission and UDP control.**
 
@@ -7,11 +7,11 @@
 
 This project implements a remote-controlled rover using an **ESP32-CAM** (AI Thinker). The system operates under a **"Solid Axle"** topology (Unified Rear Traction) to ensure startup stability and resource efficiency, featuring Ackermann steering via a servo motor.
 
-**📖 Want to build this?** Check out the complete hardware tutorial on [Instructables](https://www.instructables.com/Esp-32-Cam-Video-Rover/).
+**Want to build this?** Check out the complete hardware tutorial on [Instructables](https://www.instructables.com/Esp-32-Cam-Video-Rover/).
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
     ESP32-Video-Rover/
     ├── firmware/               # C++ Source Code (PlatformIO)
@@ -35,7 +35,7 @@ This project implements a remote-controlled rover using an **ESP32-CAM** (AI Thi
     ├── docs/                   # Technical Documentation, Diagrams, and Notes
     └── README.md               # This file
 
-## 🛠 Hardware & Connections
+## Hardware & Connections
 
 **Platform:** ESP32-CAM (AI Thinker Model) with modified external antenna.
 **Traction Topology:** Parallel (Solid Axle). Both rear motors receive the same PWM signal.
@@ -52,7 +52,7 @@ This project implements a remote-controlled rover using an **ESP32-CAM** (AI Thi
 
 > **Note:** The _Brownout Detector_ has been disabled in software to prevent resets caused by motor current spikes.
 
-## 🚀 Quick Start (Firmware)
+## Quick Start (Firmware)
 
 ### Prerequisites
 
@@ -80,7 +80,7 @@ To see debug logs (Assigned IP, Motor State):
 
     pio device monitor -b 115200
 
-## 📡 Network Architecture
+## Network Architecture
 
 - **Hybrid Mode:** Tries to connect to STA (Home WiFi). If it fails after 10s, it deploys the AP "Rover-Emergency".
 - **Discovery:** mDNS enabled at `rover.local`.
@@ -92,7 +92,7 @@ To see debug logs (Assigned IP, Motor State):
 > **⚠️ SAFETY NOTE (REVERSE):**
 > Reverse logic is **disabled in base firmware** (Phase A) to prevent Back-EMF current spikes. Safe reverse implementation (with Dynamic Dead Time) is handled via the Python Client in advanced stages.
 
-## 🎮 Controls & Telemetry
+## Controls & Telemetry
 
 The Rover relies on a custom low-latency communication protocol designed to prioritize responsiveness over reliability, a standard approach in FPV robotics.
 
@@ -125,7 +125,7 @@ To prevent conflicting commands, the firmware implements strict **Priority Logic
 3.  **STEERING (`A` vs `D`):** If both pressed -> **Center (90°)**.
 4.  **THROTTLE (`W`):** Active only if Brake is released.
 
-## ✅ Development Roadmap
+## Development Roadmap
 
 - [x] **Step 0:** Environment Setup & GitOps.
 - [x] **Step A:** Motor Driver Implementation (Solid Axle with PWM). _Implemented FWD/Brake/Coast._
@@ -149,7 +149,7 @@ To prevent conflicting commands, the firmware implements strict **Priority Logic
   - Implement safety logic in Python to calculate required braking time based on previous speed before sending reverse commands.
 - [ ] **R&D Phase (Bonus):** Electronic Differential Research. Evaluate viability of safely using GPIO 12 (Strapping Pin).
 
-## 💻 Software Architecture (PC Client)
+## Software Architecture (PC Client)
 
 The Python client (`software/main.py`) is designed following **Real-Time System** patterns to decouple vision from control.
 
